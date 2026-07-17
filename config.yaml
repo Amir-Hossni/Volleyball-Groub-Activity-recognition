@@ -1,0 +1,87 @@
+Data:
+
+  # Dataset root
+  DATA_ROOT: "/kaggle/input/datasets/ahmedmohamed365/volleyball"
+
+  # Dataset paths
+  PATHS:
+    TRACKING_ANNOTATION_PATH:
+      "volleyball_tracking_annotation/volleyball_tracking_annotation"
+    VIDEOS_PATH:
+      "volleyball_/videos"
+    VIDEOS_SAMPLE_PATH:
+      "videos_sample/videos_sample"
+    DETECTIONS_PATH:
+      "volleyball-detections/volleyball-detections"
+
+  # Labels
+  CATEGORIES:
+
+    # Player action classification
+    PLAYER_TO_IDX:
+      blocking: 0
+      digging: 1
+      falling: 2
+      jumping: 3
+      moving: 4
+      setting: 5
+      spiking: 6
+      standing: 7
+      waiting: 8
+
+    # Group activity classification
+    SCENE_TO_IDX:
+      l-pass: 0
+      r-pass: 1
+      l-spike: 2
+      r_spike: 3
+      l_set: 4
+      r_set: 5
+      l_winpoint: 6
+      r_winpoint: 7
+
+
+  # Dataset split from paper
+  SPLIT:
+    TRAIN_IDS:
+      - "1"
+      - "3"
+      - "6"
+      - "7"
+      - "10"
+      - "13"
+      - "15"
+      - "16"
+      - "18"
+      - "22"
+      - "23"
+      - "31"
+      - "32"
+      - "36"
+      - "38"
+      - "39"
+      - "40"
+      - "41"
+      - "42"
+      - "48"
+      - "50"
+      - "52"
+      - "53"
+      - "54"
+
+    VAL_IDS:
+      - "0"
+      - "2"
+      - "8"
+      - "12"
+      - "17"
+      - "19"
+      - "24"
+      - "26"
+      - "27"
+      - "28"
+      - "30"
+      - "33"
+      - "46"
+      - "49"
+      - "51"
