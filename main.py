@@ -93,6 +93,8 @@ def main():
 
         annot_root=annot_root,
 
+        player_to_idx=config["Data"]["CATEGORIES"]["PLAYER_TO_IDX"],
+        
         split_ids=train_ids,
 
         scene_to_idx=scene_to_idx,
@@ -192,7 +194,9 @@ if __name__ == "__main__":
         else:
             print(f"{key:<15}: {type(value)}")
             
-    visualize_batch(batch)
+    batch = next(iter(train_loader))
+
+
     
     print("Image shape:", batch["image"].shape)
 
@@ -209,4 +213,7 @@ if __name__ == "__main__":
     print("Unique player labels:")
 
     print(set(batch["player_label"]))
+    
+    print(batch["player_label"][:10])
+    print(type(batch["player_label"][0]))
     

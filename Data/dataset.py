@@ -21,6 +21,7 @@ class VolleyballDataset(Dataset):
         annot_root,
         split_ids,
         scene_to_idx,
+        player_to_idx=None,
         mode="clip",
         transform=None
     ):
@@ -30,6 +31,8 @@ class VolleyballDataset(Dataset):
 
         self.split_ids = split_ids
         self.scene_to_idx = scene_to_idx
+        
+        self.player_to_idx = player_to_idx
 
         self.mode = mode
         self.transform = transform
@@ -195,15 +198,10 @@ class VolleyballDataset(Dataset):
         if self.mode == "person":
 
 
-            image = self._load_image(
-                sample["frame_path"]
-            )
+            image = self._load_image(sample["frame_path"])
 
 
-            image = self._crop_player(
-                image,
-                sample["box"]
-            )
+            image = self._crop_player(image, sample["box"])
 
 
             if self.transform:
@@ -216,7 +214,7 @@ class VolleyballDataset(Dataset):
                 "image": image,
 
                 "player_label":
-                    sample["player_label"],
+                    self.player_to_idx[sample["player_label"]],
 
                 "scene_label":
                     sample["scene_label"],
