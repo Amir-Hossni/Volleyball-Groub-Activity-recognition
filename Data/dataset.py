@@ -39,7 +39,6 @@ class VolleyballDataset(Dataset):
         self._build_index()
 
 
-
     def _build_index(self):
 
         for video_path in sorted(self.videos_path.iterdir()):
@@ -47,86 +46,39 @@ class VolleyballDataset(Dataset):
             if not video_path.is_dir():
                 continue
 
-
             video_id = video_path.name
-
 
             if video_id not in self.split_ids:
                 continue
 
-
-
             annotation_file = video_path / "annotations.txt"
 
-
-            clip_categories = load_video_annot(
-                annotation_file
-            )
-
-
+            clip_categories = load_video_annot(annotation_file)
 
             for clip_path in sorted(video_path.iterdir()):
 
                 if not clip_path.is_dir():
                     continue
 
-
-
                 clip_id = clip_path.name
 
-
-
-                tracking_file = (
-                    self.annot_root
-                    /
-                    video_id
-                    /
-                    clip_id
-                    /
-                    f"{clip_id}.txt"
-                )
-
+                tracking_file = (self.annot_root/video_id/clip_id/f"{clip_id}.txt")
 
                 if not tracking_file.exists():
                     continue
 
+                frame_boxes = load_tracking_annot(tracking_file)
 
 
-                frame_boxes = load_tracking_annot(
-                    tracking_file
-                )
-
-
-                scene_label = self.scene_to_idx[
-                    clip_categories[clip_id]
-                ]
-
-
+                scene_label = self.scene_to_idx[clip_categories[clip_id]]
 
                 if self.mode == "person":
-
-                    self._add_person_samples(
-                        video_id,
-                        clip_id,
-                        clip_path,
-                        frame_boxes,
-                        scene_label
-                    )
-
+                    self._add_person_samples(video_id, clip_id, clip_path, frame_boxes, scene_label)
 
                 elif self.mode == "frame":
-
-                    self._add_frame_samples(
-                        video_id,
-                        clip_id,
-                        clip_path,
-                        frame_boxes,
-                        scene_label
-                    )
-
+                    self._add_frame_samples(video_id, clip_id, clip_path, frame_boxes,scene_label)
 
                 elif self.mode == "clip":
-
                     self.samples.append(
                         {
                             "video_id": video_id,
@@ -221,17 +173,11 @@ class VolleyballDataset(Dataset):
 
 
 
-    def _crop_player(
-        self,
-        image,
-        box: BoxInfo
-    ):
+    def _crop_player(self, image, box: BoxInfo):
 
         x1, y1, x2, y2 = box.box
 
-        return image.crop(
-            (x1, y1, x2, y2)
-        )
+        return image.crop((x1, y1, x2, y2))
 
 
 
