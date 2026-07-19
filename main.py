@@ -47,6 +47,29 @@ train_loader = DataLoader(
     num_workers=2,
     pin_memory=True
 )
+
+
+
+transform = prepare_model(
+        image_level=False
+    )
+
+train_dataset = VolleyballDataset(
+
+        videos_path=videos_path,
+
+        annot_root=annot_root,
+
+        split_ids=train_ids,
+
+        scene_to_idx=scene_to_idx,
+
+        mode="person",
+
+        transform=transform
+
+    )
+
 def main():
 
     # ==========================
@@ -140,6 +163,7 @@ def visualize_batch(batch, index=0):
 
 if __name__ == "__main__":
     # main()
+    
     
     
     print(type(sample))
