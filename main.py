@@ -36,6 +36,8 @@ annot_root = data_root / data_cfg["PATHS"]["TRACKING_ANNOTATION_PATH"]
 
 scene_to_idx = data_cfg["CATEGORIES"]["SCENE_TO_IDX"]
 
+player_to_idx = data_cfg["CATEGORIES"]["PLAYER_TO_IDX"]
+
 train_ids = data_cfg["SPLIT"]["TRAIN_IDS"]
 
 
@@ -57,6 +59,8 @@ train_dataset = VolleyballDataset(
         split_ids=train_ids,
 
         scene_to_idx=scene_to_idx,
+        
+        player_to_idx=player_to_idx,
 
         mode="person",
 
