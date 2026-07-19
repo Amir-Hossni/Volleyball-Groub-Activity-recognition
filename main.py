@@ -69,6 +69,8 @@ train_dataset = VolleyballDataset(
         transform=transform
 
     )
+sample = train_dataset[0]
+
 
 def main():
 
