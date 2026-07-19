@@ -1,3 +1,5 @@
+from random import sample
+
 from Data.dataset import VolleyballDataset
 from Data.extract_features import prepare_model
 from pathlib import Path
@@ -140,8 +142,6 @@ if __name__ == "__main__":
     # main()
     
     
-    sample = train_ids[0]
-
     print(type(sample))
     print(sample.keys())
     
