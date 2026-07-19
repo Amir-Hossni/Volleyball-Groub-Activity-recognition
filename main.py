@@ -40,13 +40,7 @@ train_ids = data_cfg["SPLIT"]["TRAIN_IDS"]
 
 
 
-train_loader = DataLoader(
-    dataset=train_ids,
-    batch_size=32,
-    shuffle=True,
-    num_workers=2,
-    pin_memory=True
-)
+
 
 
 
@@ -71,7 +65,13 @@ train_dataset = VolleyballDataset(
     )
 sample = train_dataset[0]
 
-
+train_loader = DataLoader(
+    dataset=train_dataset,
+    batch_size=32,
+    shuffle=True,
+    num_workers=2,
+    pin_memory=True
+)
 def main():
 
     # ==========================
@@ -168,45 +168,45 @@ if __name__ == "__main__":
     
     
     
-    print(type(sample))
-    print(sample.keys())
+    # print(type(sample))
+    # print(sample.keys())
     
-    batch = next(iter(train_loader))
+    # batch = next(iter(train_loader))
 
 
-    print(type(batch))
-    print(len(batch))
+    # print(type(batch))
+    # print(len(batch))
 
-    for i, item in enumerate(batch):
-        print(i, type(item))
+    # for i, item in enumerate(batch):
+    #     print(i, type(item))
     
     
     # print("=" * 60)
-    # print("Batch Information")
-    # print("=" * 60)
+    print("Batch Information")
+    print("=" * 60)
 
-    # for key, value in batch.items():
+    for key, value in batch.items():
 
-    #     if hasattr(value, "shape"):
-    #         print(f"{key:<15}: {value.shape}")
-    #     else:
-    #         print(f"{key:<15}: {type(value)}")
+        if hasattr(value, "shape"):
+            print(f"{key:<15}: {value.shape}")
+        else:
+            print(f"{key:<15}: {type(value)}")
             
-    # visualize_batch(batch)
+    visualize_batch(batch)
     
-    # print("Image shape:", batch["image"].shape)
+    print("Image shape:", batch["image"].shape)
 
-    # print("Player label:")
-    # print(batch["player_label"][:10])
+    print("Player label:")
+    print(batch["player_label"][:10])
 
-    # print(type(batch["player_label"][0]))
+    print(type(batch["player_label"][0]))
 
-    # print("Scene label:")
-    # print(batch["scene_label"][:10])
+    print("Scene label:")
+    print(batch["scene_label"][:10])
 
-    # print(type(batch["scene_label"][0]))
+    print(type(batch["scene_label"][0]))
     
-    # print("Unique player labels:")
+    print("Unique player labels:")
 
-    # print(set(batch["player_label"]))
+    print(set(batch["player_label"]))
     
