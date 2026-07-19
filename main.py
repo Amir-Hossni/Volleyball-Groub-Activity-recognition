@@ -171,17 +171,17 @@ if __name__ == "__main__":
     # print(type(sample))
     # print(sample.keys())
     
-    # batch = next(iter(train_loader))
+    batch = next(iter(train_loader))
 
 
-    # print(type(batch))
-    # print(len(batch))
+    print(type(batch))
+    print(len(batch))
 
-    # for i, item in enumerate(batch):
-    #     print(i, type(item))
+    for i, item in enumerate(batch):
+        print(i, type(item))
     
     
-    # print("=" * 60)
+    print("=" * 60)
     print("Batch Information")
     print("=" * 60)
 
