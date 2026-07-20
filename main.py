@@ -16,14 +16,14 @@ def load_config(config_path="config.yaml"):
     with open(config_path, "r") as file:
         return yaml.safe_load(file)
     
-
+config = load_config("config.yaml")
 data_root = Path(config["Data"]["DATA_ROOT"])
+
 
 
 # ==========================
 # Load Config
 # ==========================
-config = load_config("config.yaml")
 
 data_cfg = config["Data"]
 data_root = Path(data_cfg["DATA_ROOT"])
