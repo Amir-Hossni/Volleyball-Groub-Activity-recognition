@@ -92,14 +92,9 @@ class VolleyballDataset(Dataset):
                         }
                     )
 
-
                 else:
 
-                    raise ValueError(
-                        "mode must be person, frame or clip"
-                    )
-
-
+                    raise ValueError("mode must be person, frame or clip")
 
     def _add_person_samples(
         self,
@@ -110,27 +105,17 @@ class VolleyballDataset(Dataset):
         scene_label
     ):
 
-
         for frame_id, boxes in frame_boxes.items():
-
             for box in boxes:
-
                 self.samples.append(
                     {
                         "video_id": video_id,
                         "clip_id": clip_id,
                         "frame_id": frame_id,
-
-                        "frame_path":
-                            clip_path / f"{frame_id}.jpg",
-
+                        "frame_path": clip_path / f"{frame_id}.jpg",
                         "box": box,
-
-                        "player_label":
-                            box.category,
-
-                        "scene_label":
-                            scene_label
+                        "player_label":box.category,
+                        "scene_label": scene_label
                     }
                 )
 
@@ -145,8 +130,7 @@ class VolleyballDataset(Dataset):
         scene_label
     ):
 
-
-        for frame_id in frame_boxes.keys():
+        for frame_id, boxes in frame_boxes.items():
 
             self.samples.append(
                 {
@@ -157,11 +141,13 @@ class VolleyballDataset(Dataset):
                     "frame_path":
                         clip_path / f"{frame_id}.jpg",
 
+                    "boxes":
+                        boxes,
+
                     "scene_label":
                         scene_label
                 }
             )
-
 
 
     def __len__(self):
@@ -188,26 +174,18 @@ class VolleyballDataset(Dataset):
 
         sample = self.samples[index]
 
-
-
-        # ======================
         # Person level
         # B2 / B3
         # ======================
 
         if self.mode == "person":
 
-
             image = self._load_image(sample["frame_path"])
-
 
             image = self._crop_player(image, sample["box"])
 
-
             if self.transform:
                 image = self.transform(image)
-
-
 
             return {
 
@@ -236,9 +214,6 @@ class VolleyballDataset(Dataset):
             }
 
 
-
-
-        # ======================
         # Frame level
         # B1
         # ======================
@@ -250,36 +225,46 @@ class VolleyballDataset(Dataset):
                 sample["frame_path"]
             )
 
+            player_images = []
 
-            if self.transform:
-                image = self.transform(image)
+            for box in sample["boxes"]:
 
+                crop = self._crop_player(image,box)
+
+                if self.transform:crop = self.transform(crop)
+
+                player_images.append(crop)
+
+
+            while len(player_images) < 12:
+
+                player_images.append(
+                    torch.zeros_like(player_images[0])
+                )
+
+            player_images = torch.stack(player_images)
 
 
             return {
 
-                "image": image,
+                "images": player_images,
 
-                "scene_label":
-                    sample["scene_label"]
+                "scene_label": sample["scene_label"],
+
+                "video_id": sample["video_id"],
+
+                "clip_id": sample["clip_id"],
+
+                "frame_id": sample["frame_id"]
             }
-
-
-
-
-        # ======================
+            
         # Clip level
-        # ======================
-
         else:
-
 
             frames = []
             players = []
 
-
             for frame_id, boxes in sample["frame_boxes"].items():
-
 
                 image_path = (
                     sample["clip_path"]
@@ -292,15 +277,11 @@ class VolleyballDataset(Dataset):
                     image_path
                 )
 
-
                 if self.transform:
                     image = self.transform(image)
 
-
                 frames.append(image)
-
                 players.append(boxes)
-
 
 
             return {
