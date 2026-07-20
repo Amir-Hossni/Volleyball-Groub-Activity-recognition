@@ -91,6 +91,10 @@ model = B2Model(
     pretrained=True
 )
 
+if torch.cuda.device_count() > 1:
+    print("Using DataParallel")
+    model = torch.nn.DataParallel(model)
+
 model = model.to(device)
 
 

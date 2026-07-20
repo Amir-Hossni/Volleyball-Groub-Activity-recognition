@@ -54,6 +54,10 @@ def train(model,train_loader,val_loader,criterion,optimizer,device,epochs,save_p
 
     for epoch in range(epochs):
 
+        
+        print("=" * 50)
+        print(f"Starting Epoch [{epoch+1}/{epochs}]")
+        print("=" * 50)
 
         train_loss, train_acc = train_one_epoch(
             model,
@@ -143,7 +147,11 @@ Val F1     : {val_f1:.4f}
             torch.save(
                 {
                     "epoch": epoch + 1,
-                    "model_state_dict": model.state_dict(),
+                    "model_state_dict": (
+                        model.module.state_dict()
+                        if isinstance(model, torch.nn.DataParallel)
+                        else model.state_dict()
+                    ),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "val_f1": val_f1,
                     "val_acc": val_acc
