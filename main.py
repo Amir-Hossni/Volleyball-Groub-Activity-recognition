@@ -4,7 +4,8 @@ from Data.extract_features import prepare_model
 from pathlib import Path
 import yaml
 
-from Baseline2 import model_B2, training_B2
+from Baseline2.model_B2 import B2Model
+from Baseline2.training_B2 import train
 from torch.utils.data import DataLoader
 
 import torch
@@ -19,8 +20,6 @@ def load_config(config_path="config.yaml"):
 config = load_config("config.yaml")
 
 
-
-# ==========================
 # Load Config
 # ==========================
 
@@ -86,7 +85,7 @@ device = torch.device(
 
 
 # Model
-model = model_B2(
+model = B2Model(
     num_players=12,
     num_classes=len(scene_to_idx),
     pretrained=True
@@ -106,24 +105,10 @@ optimizer = torch.optim.AdamW(
 
 
 
-training_B2(
-    model,
-    train_loader,
-    val_loader,
-    criterion,
-    optimizer,
-    device,
-    epochs=50,
-    save_path="/kaggle/working/best_B2_model.pth"
-)
-criterion = torch.nn.CrossEntropyLoss()
-
 if __name__ == "__main__":
     
     
-    
-    
-    training_B2(
+    train(
         model,
         train_loader,
         val_loader,
