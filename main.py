@@ -128,3 +128,5 @@ if __name__ == "__main__":
     #     save_path="/kaggle/working/best_B2_model.pth"
     # )
     create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path=pkl_path)
+    
+    
