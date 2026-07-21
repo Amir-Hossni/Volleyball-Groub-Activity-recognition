@@ -35,82 +35,82 @@ val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 
 
 # Transform
-transform = prepare_model(image_level=False)
+# transform = prepare_model(image_level=False)
 
 
-# Dataset
-train_dataset = VolleyballDataset(
-    videos_path=videos_path,
-    annot_root=annot_root,
-    split_ids=train_ids,
-    scene_to_idx=scene_to_idx,
-    player_to_idx=player_to_idx,
-    mode="frame",
-    transform=transform
-)
+# # Dataset
+# train_dataset = VolleyballDataset(
+#     videos_path=videos_path,
+#     annot_root=annot_root,
+#     split_ids=train_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="frame",
+#     transform=transform
+# )
 
-val_dataset = VolleyballDataset(
-    videos_path=videos_path,
-    annot_root=annot_root,
-    split_ids=val_ids,
-    scene_to_idx=scene_to_idx,
-    player_to_idx=player_to_idx,
-    mode="frame",
-    transform=transform
-)
-
-
-# DataLoader
-train_loader = DataLoader(
-    dataset=train_dataset,
-    batch_size=16,
-    shuffle=True,
-    num_workers=4,
-    pin_memory=True,
-    persistent_workers=True,
-    prefetch_factor=2
-)
-
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=16,
-    shuffle=False,
-    num_workers=4,
-    pin_memory=True,
-    persistent_workers=True,
-    prefetch_factor=2
-)
+# val_dataset = VolleyballDataset(
+#     videos_path=videos_path,
+#     annot_root=annot_root,
+#     split_ids=val_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="frame",
+#     transform=transform
+# )
 
 
-# Device
-device = torch.device(
-    "cuda" if torch.cuda.is_available()
-    else "cpu"
-)
+# # DataLoader
+# train_loader = DataLoader(
+#     dataset=train_dataset,
+#     batch_size=16,
+#     shuffle=True,
+#     num_workers=4,
+#     pin_memory=True,
+#     persistent_workers=True,
+#     prefetch_factor=2
+# )
+
+# val_loader = DataLoader(
+#     val_dataset,
+#     batch_size=16,
+#     shuffle=False,
+#     num_workers=4,
+#     pin_memory=True,
+#     persistent_workers=True,
+#     prefetch_factor=2
+# )
 
 
-# Model
-model = B2Model(
-    num_players=12,
-    num_classes=len(scene_to_idx),
-    pretrained=True
-)
-
-if torch.cuda.device_count() > 1:
-    print("Using DataParallel")
-    model = torch.nn.DataParallel(model)
-
-model = model.to(device)
+# # Device
+# device = torch.device(
+#     "cuda" if torch.cuda.is_available()
+#     else "cpu"
+# )
 
 
-# Loss
-criterion = torch.nn.CrossEntropyLoss()
+# # Model
+# model = B2Model(
+#     num_players=12,
+#     num_classes=len(scene_to_idx),
+#     pretrained=True
+# )
 
-# Optimizer
-optimizer = torch.optim.AdamW(
-    model.parameters(),
-    lr=1e-4
-)
+# if torch.cuda.device_count() > 1:
+#     print("Using DataParallel")
+#     model = torch.nn.DataParallel(model)
+
+# model = model.to(device)
+
+
+# # Loss
+# criterion = torch.nn.CrossEntropyLoss()
+
+# # Optimizer
+# optimizer = torch.optim.AdamW(
+#     model.parameters(),
+#     lr=1e-4
+# )
 
 
 
