@@ -1,13 +1,13 @@
 
 from Data.dataset import VolleyballDataset
-from Data.extract_features import prepare_model
+from Data.preprocessing import prepare_model
 from pathlib import Path
 import yaml
 
 from Baseline2.model_B2 import B2Model
 from Baseline2.training_B2 import train
 from torch.utils.data import DataLoader
-
+from Data.create_annot_pkl import create_pkl_version
 import torch
 
 
@@ -27,6 +27,7 @@ data_cfg = config["Data"]
 data_root = Path(data_cfg["DATA_ROOT"])
 videos_path = data_root / data_cfg["PATHS"]["VIDEOS_PATH"]
 annot_root = data_root / data_cfg["PATHS"]["TRACKING_ANNOTATION_PATH"]
+pkl_path = Path(data_cfg["PATHS"]["PKL_PATH"])
 scene_to_idx = data_cfg["CATEGORIES"]["SCENE_TO_IDX"]
 player_to_idx = data_cfg["CATEGORIES"]["PLAYER_TO_IDX"]
 train_ids = data_cfg["SPLIT"]["TRAIN_IDS"]
@@ -64,16 +65,20 @@ train_loader = DataLoader(
     dataset=train_dataset,
     batch_size=16,
     shuffle=True,
-    num_workers=2,
-    pin_memory=True
+    num_workers=4,
+    pin_memory=True,
+    persistent_workers=True,
+    prefetch_factor=2
 )
 
 val_loader = DataLoader(
     val_dataset,
     batch_size=16,
     shuffle=False,
-    num_workers=2,
-    pin_memory=True
+    num_workers=4,
+    pin_memory=True,
+    persistent_workers=True,
+    prefetch_factor=2
 )
 
 
@@ -112,14 +117,14 @@ optimizer = torch.optim.AdamW(
 if __name__ == "__main__":
     
     
-    train(
-        model,
-        train_loader,
-        val_loader,
-        criterion,
-        optimizer,
-        device,
-        epochs=50,
-        save_path="/kaggle/working/best_B2_model.pth"
-    )
-  
+    # train(
+    #     model,
+    #     train_loader,
+    #     val_loader,
+    #     criterion,
+    #     optimizer,
+    #     device,
+    #     epochs=50,
+    #     save_path="/kaggle/working/best_B2_model.pth"
+    # )
+    create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path=pkl_path)

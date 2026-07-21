@@ -13,6 +13,8 @@ Data:
       "videos_sample/videos_sample"
     DETECTIONS_PATH:
       "volleyball-detections/volleyball-detections"
+    PKL_PATH:
+      "/kaggle/working/annot_all.pkl"
 
   # Labels
   CATEGORIES:
