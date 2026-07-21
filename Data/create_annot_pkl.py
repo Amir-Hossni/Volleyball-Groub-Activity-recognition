@@ -3,13 +3,17 @@ from .volleyball_annot_loader import load_volleyball_dataset
 import pickle
 from pathlib import Path
 
-def create_pkl_version(videos_root, annot_root, save_path_annot):
-    # You can use this function to create and save pkl version of the dataset
-    
-    videos_annot = load_volleyball_dataset(videos_root, annot_root)
+def create_pkl_version(videos_root, annot_root, save_path):
 
-    with open(save_path_annot, 'wb') as file:
+    videos_annot = load_volleyball_dataset(
+        videos_root,
+        annot_root
+    )
+
+    with open(save_path, "wb") as file:
         pickle.dump(videos_annot, file)
+
+    print(f"Saved: {save_path}")
 
 
 # def test_pkl_version():
