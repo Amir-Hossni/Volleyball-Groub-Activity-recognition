@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from time import time
+
 import yaml
 from torch.utils.data import DataLoader
 import torch
@@ -164,6 +164,8 @@ if __name__ == "__main__":
 # )
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
+    
+    import time as timer
     print("\nTesting Full Training Step...")
 
     batch = next(iter(train_loader))
@@ -173,7 +175,7 @@ if __name__ == "__main__":
 
     model.train()
 
-    start = time.time()
+    start = timer.time()
 
     optimizer.zero_grad()
 
