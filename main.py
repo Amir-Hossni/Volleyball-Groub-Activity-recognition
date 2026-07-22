@@ -127,6 +127,6 @@ if __name__ == "__main__":
     #     epochs=50,
     #     save_path="/kaggle/working/best_B2_model.pth"
     # )
-    create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path=pkl_path)
+    create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     
