@@ -22,7 +22,7 @@ def evaluate_person(
     for batch in loader:
 
 
-        images = batch["images"].to(device)
+        images = batch["image"].to(device)
 
         labels = batch["player_label"].to(device)
 
