@@ -151,17 +151,56 @@ if __name__ == "__main__":
     # )
     
     
-    train_person_B3(
-    model,
-    train_loader,
-    val_loader,
-    criterion,
-    optimizer,
-    device,
-    epochs=50,
-    save_path="/kaggle/working/best_B3_person_model.pth"
-)
+#     train_person_B3(
+#     model,
+#     train_loader,
+#     val_loader,
+#     criterion,
+#     optimizer,
+#     device,
+#     epochs=50,
+#     save_path="/kaggle/working/best_B3_person_model.pth"
+# )
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
-    
-    
+    import time
+
+    print("Dataset size:", len(train_dataset))
+
+    # Test Dataset directly
+    print("\nTesting Dataset...")
+
+    start = time.time()
+
+    for i in range(10):
+
+        sample = train_dataset[i]
+
+        print(
+            i,
+            sample["image"].shape,
+            sample["player_label"]
+        )
+
+    print("10 samples time:", time.time() - start)
+
+
+
+    # Test DataLoader
+    print("\nTesting DataLoader...")
+
+    start = time.time()
+
+    for batch_idx, batch in enumerate(train_loader):
+
+        print(
+            "batch:",
+            batch_idx,
+            batch["image"].shape
+        )
+
+        if batch_idx == 5:
+            break
+
+
+    print("6 batches time:", time.time() - start)
