@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from time import time
 import yaml
 from torch.utils.data import DataLoader
 import torch
@@ -163,30 +164,28 @@ if __name__ == "__main__":
 # )
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
-    import time
-    import torch
-
-    print("\nTesting Model Forward...")
+    print("\nTesting Full Training Step...")
 
     batch = next(iter(train_loader))
 
     images = batch["image"].to(device)
+    labels = batch["player_label"].to(device)
 
-    print("Input:", images.shape)
-
-    # warm up
-    with torch.no_grad():
-        _ = model(images)
-
-    torch.cuda.synchronize()
+    model.train()
 
     start = time.time()
 
-    with torch.no_grad():
-        output = model(images)
+    optimizer.zero_grad()
+
+    output = model(images)
+
+    loss = criterion(output, labels)
+
+    loss.backward()
+
+    optimizer.step()
 
     torch.cuda.synchronize()
 
-    print("Forward time:", time.time() - start)
-
-    print("Output:", output.shape)
+    print("One training step time:", time.time() - start)
+    print("Loss:", loss.item())
