@@ -164,43 +164,29 @@ if __name__ == "__main__":
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     import time
+    import torch
 
-    print("Dataset size:", len(train_dataset))
+    print("\nTesting Model Forward...")
 
-    # Test Dataset directly
-    print("\nTesting Dataset...")
+    batch = next(iter(train_loader))
 
-    start = time.time()
+    images = batch["image"].to(device)
 
-    for i in range(10):
+    print("Input:", images.shape)
 
-        sample = train_dataset[i]
+    # warm up
+    with torch.no_grad():
+        _ = model(images)
 
-        print(
-            i,
-            sample["image"].shape,
-            sample["player_label"]
-        )
-
-    print("10 samples time:", time.time() - start)
-
-
-
-    # Test DataLoader
-    print("\nTesting DataLoader...")
+    torch.cuda.synchronize()
 
     start = time.time()
 
-    for batch_idx, batch in enumerate(train_loader):
+    with torch.no_grad():
+        output = model(images)
 
-        print(
-            "batch:",
-            batch_idx,
-            batch["image"].shape
-        )
+    torch.cuda.synchronize()
 
-        if batch_idx == 5:
-            break
+    print("Forward time:", time.time() - start)
 
-
-    print("6 batches time:", time.time() - start)
+    print("Output:", output.shape)
