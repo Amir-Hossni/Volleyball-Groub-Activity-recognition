@@ -5,7 +5,7 @@ from utlis.metrics import calculate_metrics
 from utlis.checkpoint import save_checkpoint
 from utlis.early_stopping import EarlyStopping
 
-from .eval_person_B3 import evaluate_person_B3
+from .eval_person_B3 import evaluate_person
 
 
 
@@ -162,7 +162,7 @@ def train_person_B3(
 
 
 
-        val_loss, val_metrics = evaluate_person_B3(
+        val_loss, val_metrics = evaluate_person(
             model,
             val_loader,
             criterion,
