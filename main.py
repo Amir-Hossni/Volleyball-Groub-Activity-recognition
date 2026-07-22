@@ -166,34 +166,34 @@ if __name__ == "__main__":
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     import time as timer
-import torch
+    import torch
 
-print("\nTesting Full Training Step...")
+    print("\nTesting Full Training Step...")
 
-batch = next(iter(train_loader))
+    batch = next(iter(train_loader))
 
-images = batch["image"].to(device)
-labels = batch["player_label"].to(device)
+    images = batch["image"].to(device)
+    labels = batch["player_label"].to(device)
 
-model.train()
+    model.train()
 
-torch.cuda.synchronize()
+    torch.cuda.synchronize()
 
-start = timer.time()
+    start = timer.time()
 
-optimizer.zero_grad()
+    optimizer.zero_grad()
 
-output = model(images)
+    output = model(images)
 
-loss = criterion(output, labels)
+    loss = criterion(output, labels)
 
-loss.backward()
+    loss.backward()
 
-optimizer.step()
+    optimizer.step()
 
-torch.cuda.synchronize()
+    torch.cuda.synchronize()
 
-end = timer.time()
+    end = timer.time()
 
-print("One training step time:", end - start)
-print("Loss:", loss.item())
+    print("One training step time:", end - start)
+    print("Loss:", loss.item())
