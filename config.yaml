@@ -14,7 +14,7 @@ Data:
     DETECTIONS_PATH:
       "volleyball-detections/volleyball-detections"
     PKL_PATH:
-      "/kaggle/working/annot_all.pkl"
+      /kaggle/input/datasets/amirhossni/annot-dataset/annot_all.pkl
 
   # Labels
   CATEGORIES:

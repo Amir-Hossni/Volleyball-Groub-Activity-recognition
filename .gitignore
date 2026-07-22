@@ -1,0 +1,52 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+
+# Dataset (large files)
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.avi
+
+# Dataset folders
+data/
+Data/raw/
+videos/
+volleyball_/
+volleyball-detections/
+volleyball_tracking_annotation/
+
+
+# Pickle files (large generated files)
+*.pkl
+
+# Model checkpoints
+*.pth
+*.pt
+*.ckpt
+
+# TensorBoard logs
+runs/
+logs/
+
+
+# Kaggle files
+kaggle.json
