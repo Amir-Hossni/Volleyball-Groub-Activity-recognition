@@ -1,80 +1,89 @@
 import torch
 from torchmetrics.classification import MulticlassF1Score
+from sklearn.metrics import classification_report, confusion_matrix
 
 
 
-def accuracy(predictions, targets):
+def calculate_metrics(
+    predictions,
+    targets, num_classes=None, class_names=None, f1_average="macro"):
     """
-    Calculate classification accuracy
+    Calculate classification metrics
 
     Args:
         predictions:
-            predicted class indices
+            predicted class indices tensor
 
         targets:
-            ground truth labels
+            ground truth labels tensor
 
-    Returns:
-        accuracy percentage
-    """
-
-    correct = (
-        predictions == targets
-    ).sum().item()
-
-    total = targets.size(0)
-
-    return 100 * correct / total
-
-
-
-
-def create_f1_metric(num_classes, device):
-    """
-    Create F1 score metric
-
-    Args:
         num_classes:
             number of classes
 
-        device:
-            cuda or cpu
+        class_names:
+            list of class names for classification report
+
+        f1_average:
+            macro / weighted / micro
 
     Returns:
-        torchmetrics F1 metric
+        metrics dictionary
     """
 
-    metric = MulticlassF1Score(
+
+    # Accuracy
+
+    correct = ( predictions == targets).sum().item()
+    total = targets.size(0)
+    accuracy = (100 * correct / total)
+
+    # F1 Score using torchmetrics
+
+    if num_classes is None:
+
+        num_classes = (torch.max(targets).item() + 1 )
+
+
+    f1_metric = MulticlassF1Score(
         num_classes=num_classes,
-        average="macro"
-    )
-
-    return metric.to(device)
+        average=f1_average
+    ).to(targets.device)
 
 
-
-
-def f1_score_metric(metric, predictions, targets):
-    """
-    Calculate F1 score using torchmetrics
-
-    Args:
-        metric:
-            torchmetrics F1 metric object
-
-        predictions:
-            predicted class indices
-
-        targets:
-            ground truth labels
-
-    Returns:
-        F1 score
-    """
-
-    score = metric(
+    f1 = f1_metric(
         predictions,
         targets
-    )
+    ).item()
 
-    return score.item()
+
+
+    metrics = {
+        "accuracy": accuracy,
+        "f1_score": f1
+    }
+
+
+
+    # Classification report
+    # Used only for final test
+
+    if class_names is not None:
+
+        preds_cpu = predictions.cpu().numpy()
+        targets_cpu = targets.cpu().numpy()
+
+        metrics["classification_report"] = classification_report(
+            targets_cpu,
+            preds_cpu,
+            target_names=class_names,
+            digits=2
+        )
+
+        metrics["confusion_matrix"] = confusion_matrix(
+            targets_cpu,
+            preds_cpu
+        )
+
+
+    return metrics
+

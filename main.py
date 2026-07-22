@@ -1,14 +1,21 @@
 
-from Data.dataset import VolleyballDataset
-from Data.preprocessing import prepare_model
 from pathlib import Path
 import yaml
-
-from Baseline2.model_B2 import B2Model
-from Baseline2.training_B2 import train
 from torch.utils.data import DataLoader
-from Data.create_annot_pkl import create_pkl_version
 import torch
+
+from utlis.early_stopping import EarlyStopping
+from Data.dataset import VolleyballDataset
+from Data.preprocessing import prepare_model
+
+# from Baseline2.model_B2 import B2Model
+from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
+
+# from Baseline2.training_B2 import train
+from Baseline3.training_person_B3 import train_person_B3
+
+# from Data.create_annot_pkl import create_pkl_version
+
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -35,84 +42,99 @@ val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 
 
 # Transform
-# transform = prepare_model(image_level=False)
+transform = prepare_model(image_level=False)
 
 
-# # Dataset
-# train_dataset = VolleyballDataset(
-#     videos_path=videos_path,
-#     annot_root=annot_root,
-#     split_ids=train_ids,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     mode="frame",
-#     transform=transform
-# )
+# Dataset
+train_dataset = VolleyballDataset(
+    videos_path=videos_path,
+    pkl_path=pkl_path,
+    split_ids=train_ids,
+    scene_to_idx=scene_to_idx,
+    player_to_idx=player_to_idx,
+    mode="person",
+    transform=transform
+)
 
-# val_dataset = VolleyballDataset(
-#     videos_path=videos_path,
-#     annot_root=annot_root,
-#     split_ids=val_ids,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     mode="frame",
-#     transform=transform
-# )
-
-
-# # DataLoader
-# train_loader = DataLoader(
-#     dataset=train_dataset,
-#     batch_size=16,
-#     shuffle=True,
-#     num_workers=4,
-#     pin_memory=True,
-#     persistent_workers=True,
-#     prefetch_factor=2
-# )
-
-# val_loader = DataLoader(
-#     val_dataset,
-#     batch_size=16,
-#     shuffle=False,
-#     num_workers=4,
-#     pin_memory=True,
-#     persistent_workers=True,
-#     prefetch_factor=2
-# )
+val_dataset = VolleyballDataset(
+    videos_path=videos_path,
+    pkl_path=pkl_path,
+    split_ids=val_ids,
+    scene_to_idx=scene_to_idx,
+    player_to_idx=player_to_idx,
+    mode="person",
+    transform=transform
+)
 
 
-# # Device
-# device = torch.device(
-#     "cuda" if torch.cuda.is_available()
-#     else "cpu"
-# )
+# DataLoader
+train_loader = DataLoader(
+    dataset=train_dataset,
+    batch_size=16,
+    shuffle=True,
+    num_workers=4,
+    pin_memory=True,
+    persistent_workers=True,
+    prefetch_factor=2
+)
+
+val_loader = DataLoader(
+    val_dataset,
+    batch_size=16,
+    shuffle=False,
+    num_workers=4,
+    pin_memory=True,
+    persistent_workers=True,
+    prefetch_factor=2
+)
 
 
-# # Model
+# Device
+device = torch.device(
+    "cuda" if torch.cuda.is_available()
+    else "cpu"
+)
+
+
+# Model
+################
+
+#B2
 # model = B2Model(
 #     num_players=12,
 #     num_classes=len(scene_to_idx),
 #     pretrained=True
 # )
 
-# if torch.cuda.device_count() > 1:
-#     print("Using DataParallel")
-#     model = torch.nn.DataParallel(model)
+# B3
+model = PersonClassifierB3(
+    num_classes=len(player_to_idx),
+    pretrained=True
+)
+# person_model.load_state_dict(torch.load("person.pth"))
+# backbone = person_model.backbone
+# group_model = GroupClassifierB3(backbone)
 
-# model = model.to(device)
+if torch.cuda.device_count() > 1:
+    print("Using DataParallel")
+    model = torch.nn.DataParallel(model)
+
+model = model.to(device)
 
 
-# # Loss
-# criterion = torch.nn.CrossEntropyLoss()
+# Loss
+criterion = torch.nn.CrossEntropyLoss()
 
-# # Optimizer
-# optimizer = torch.optim.AdamW(
-#     model.parameters(),
-#     lr=1e-4
-# )
+# Optimizer
+optimizer = torch.optim.AdamW(
+    model.parameters(),
+    lr=1e-4
+)
 
-
+early_stopping = EarlyStopping(
+    patience=10,
+    mode="max"
+)
 
 if __name__ == "__main__":
     
@@ -127,6 +149,19 @@ if __name__ == "__main__":
     #     epochs=50,
     #     save_path="/kaggle/working/best_B2_model.pth"
     # )
-    create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
+    
+    
+    train_person_B3(
+    model,
+    train_loader,
+    val_loader,
+    criterion,
+    optimizer,
+    device,
+    epochs=50,
+    save_path="/kaggle/working/best_B3_person_model.pth"
+)
+    
+    # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     
