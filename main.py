@@ -142,7 +142,7 @@ early_stopping = EarlyStopping(
 
 if __name__ == "__main__":
     
-    from Data.dataset1 import VolleyballDataset, flatten_person_batch
+    from Data.new_dataset import VolleyballDataset, flatten_person_batch
     # train(
     #     model,
     #     train_loader,
