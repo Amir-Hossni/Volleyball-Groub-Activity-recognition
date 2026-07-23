@@ -18,6 +18,7 @@ from Baseline3.training_person_B3 import train_person_B3
 
 # from Data.create_annot_pkl import create_pkl_version
 
+from Data.new_dataset import VolleyballDataset, flatten_person_batch
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -142,7 +143,6 @@ early_stopping = EarlyStopping(
 
 if __name__ == "__main__":
     
-    from Data.new_dataset import VolleyballDataset, flatten_person_batch
     # train(
     #     model,
     #     train_loader,
