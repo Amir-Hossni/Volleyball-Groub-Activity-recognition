@@ -54,7 +54,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person",
+    mode="person_grouped",
     transform=transform
 )
 
