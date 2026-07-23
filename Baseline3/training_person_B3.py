@@ -27,7 +27,7 @@ def train_person_one_epoch(
 
     for batch in train_loader:
 
-        images = batch["image"].to(device)
+        images = batch["images"].to(device)
 
         labels = batch["player_label"].to(device)
         
