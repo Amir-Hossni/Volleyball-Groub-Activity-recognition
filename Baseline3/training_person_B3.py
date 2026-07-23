@@ -41,6 +41,13 @@ def train_person_one_epoch(
 
         outputs = model(images)
 
+
+
+        mask = targets != -1
+
+        predictions = predictions[mask]
+        targets = targets[mask]
+        
         loss = criterion(
             outputs,
             labels

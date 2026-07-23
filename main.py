@@ -142,7 +142,7 @@ early_stopping = EarlyStopping(
 
 if __name__ == "__main__":
     
-    
+    from Data.dataset1 import VolleyballDataset, flatten_person_batch
     # train(
     #     model,
     #     train_loader,
@@ -155,17 +155,56 @@ if __name__ == "__main__":
     # )
     
     
-    train_person_B3(
-    model,
-    train_loader,
-    val_loader,
-    criterion,
-    optimizer,
-    device,
-    epochs=50,
-    save_path="/kaggle/working/best_B3_person_model.pth"
-)
+#     train_person_B3(
+#     model,
+#     train_loader,
+#     val_loader,
+#     criterion,
+#     optimizer,
+#     device,
+#     epochs=50,
+#     save_path="/kaggle/working/best_B3_person_model.pth"
+# )
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
+    
    
+
+    ds = VolleyballDataset(
+        videos_path=videos_path,
+        pkl_path=pkl_path,
+        Train_ids=train_ids,
+        scene_to_idx=scene_to_idx,
+        player_to_idx=player_to_idx,
+        mode="person",
+        transform=transform
+    )
+
+
+    loader = DataLoader(
+        ds,
+        batch_size=16,
+        shuffle=True,
+        num_workers=4,
+        persistent_workers=True,
+        prefetch_factor=4,
+        pin_memory=True
+    )
+
+
+    for crops, labels, mask, _scene in loader:
+
+        x, y = flatten_person_batch(
+            crops,
+            labels,
+            mask
+        )
+        # x -> (N, C, H, W)
+        # y -> (N,)
+
+
+        loss = criterion(
+            model(x.to(device)),
+            y.to(device)
+)
