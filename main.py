@@ -1,5 +1,5 @@
 
-from datetime import time
+import time
 from pathlib import Path
 import pickle
 
@@ -50,47 +50,47 @@ transform = prepare_model(image_level=False)
 
 
 # Dataset
-train_dataset = VolleyballDataset(
-    videos_path=videos_path,
-    pkl_path=pkl_path,
-    split_ids=train_ids,
-    scene_to_idx=scene_to_idx,
-    player_to_idx=player_to_idx,
-    mode="person_grouped",
-    transform=transform
-)
+# train_dataset = VolleyballDataset(
+#     videos_path=videos_path,
+#     pkl_path=pkl_path,
+#     split_ids=train_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="person_grouped",
+#     transform=transform
+# )
 
-val_dataset = VolleyballDataset(
-    videos_path=videos_path,
-    pkl_path=pkl_path,
-    split_ids=val_ids,
-    scene_to_idx=scene_to_idx,
-    player_to_idx=player_to_idx,
-    mode="person_grouped",
-    transform=transform
-)
+# val_dataset = VolleyballDataset(
+#     videos_path=videos_path,
+#     pkl_path=pkl_path,
+#     split_ids=val_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="person_grouped",
+#     transform=transform
+# )
 
 
-# DataLoader
-train_loader = DataLoader(
-    dataset=train_dataset,
-    batch_size=16,
-    shuffle=True,
-    num_workers=4,
-    pin_memory=True,
-    persistent_workers=True,
-    prefetch_factor=2
-)
+# # DataLoader
+# train_loader = DataLoader(
+#     dataset=train_dataset,
+#     batch_size=16,
+#     shuffle=True,
+#     num_workers=4,
+#     pin_memory=True,
+#     persistent_workers=True,
+#     prefetch_factor=2
+# )
 
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=16,
-    shuffle=False,
-    num_workers=4,
-    pin_memory=True,
-    persistent_workers=True,
-    prefetch_factor=2
-)
+# val_loader = DataLoader(
+#     val_dataset,
+#     batch_size=16,
+#     shuffle=False,
+#     num_workers=4,
+#     pin_memory=True,
+#     persistent_workers=True,
+#     prefetch_factor=2
+# )
 
 
 # Device
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     ds = VolleyballDatasetN(
         videos_path=videos_path,
         pkl_path=pkl_path,
-        Train_ids=train_ids,
+        split_ids=train_ids,
         scene_to_idx=scene_to_idx,
         player_to_idx=player_to_idx,
         mode="person",
