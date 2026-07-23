@@ -19,7 +19,7 @@ from Baseline3.training_person_B3 import train_person_B3
 
 # from Data.create_annot_pkl import create_pkl_version
 
-from Data.new_dataset import VolleyballDataset, flatten_person_batch
+from Data.new_dataset import VolleyballDatasetN, flatten_person_batch
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     
     print("Creating Dataset...")
 
-    ds = VolleyballDataset(
+    ds = VolleyballDatasetN(
         videos_path=videos_path,
         pkl_path=pkl_path,
         Train_ids=train_ids,

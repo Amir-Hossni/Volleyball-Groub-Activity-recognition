@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 
 
-class VolleyballDataset(Dataset):
+class VolleyballDatasetN(Dataset):
 
     _MODES = ("person", "frame", "clip", "clip_crops")
 
