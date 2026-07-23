@@ -24,7 +24,7 @@ def evaluate_person(
 
         images = batch["images"].to(device)
 
-        labels = batch["player_label"].to(device)
+        labels = batch["player_labels"].to(device)
 
         B, P, C, H, W = images.shape
         
@@ -46,13 +46,7 @@ def evaluate_person(
             dim=1
         )
 
-        # remove padded players
-        mask = labels != -1
-        
-        predictions = predictions[mask]
-
-        labels = labels[mask]
-        
+     
         all_predictions.append(
             predictions
         )

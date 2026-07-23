@@ -29,7 +29,7 @@ def train_person_one_epoch(
 
         images = batch["images"].to(device)
 
-        labels = batch["player_label"].to(device)
+        labels = batch["player_labels"].to(device)
         
         B, P, C, H, W = images.shape
 
@@ -61,13 +61,6 @@ def train_person_one_epoch(
             outputs,
             dim=1
         )
-
-
-        mask = labels != -1
-                
-        predictions = predictions[mask]
-        
-        labels = labels[mask]
         
         
         all_predictions.append(
