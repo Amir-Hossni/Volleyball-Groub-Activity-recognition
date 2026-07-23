@@ -1,4 +1,5 @@
 
+from datetime import time
 from pathlib import Path
 import pickle
 
@@ -169,7 +170,7 @@ if __name__ == "__main__":
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     
-   
+    print("Creating Dataset...")
 
     ds = VolleyballDataset(
         videos_path=videos_path,
@@ -180,6 +181,8 @@ if __name__ == "__main__":
         mode="person",
         transform=transform
     )
+
+    print(f"Dataset size: {len(ds)} samples")
 
 
     loader = DataLoader(
@@ -192,9 +195,26 @@ if __name__ == "__main__":
         pin_memory=True
     )
 
+    print(f"DataLoader batches: {len(loader)}")
+    print("Starting loading test...\n")
 
-    for crops, labels, mask, _scene in loader:
 
+    start_time = time.time()
+
+
+    for batch_idx, (crops, labels, mask, _scene) in enumerate(loader):
+
+        batch_time = time.time() - start_time
+
+        print("=" * 50)
+        print(f"Batch {batch_idx + 1}/{len(loader)}")
+        print(f"Time since start: {batch_time:.2f} sec")
+
+        print("Before flatten:")
+        print(" crops :", crops.shape)
+        print(" labels:", labels.shape)
+        print(" mask  :", mask.shape)
+        
         x, y = flatten_person_batch(
             crops,
             labels,
