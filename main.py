@@ -166,20 +166,179 @@ if __name__ == "__main__":
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
-    annotations = pickle.load(open("annot_all.pkl","rb"))
+    import pickle
+    from pathlib import Path
 
-    print(annotations.keys())
 
-    video = annotations["0"]
+    # ==========================
+    # Change this path
+    # ==========================
 
+    pkl_path = "/kaggle/input/datasets/amirhossni/annot-dataset/annot_all.pkl"
+
+
+    # ==========================
+    # Load PKL
+    # ==========================
+
+    with open(pkl_path, "rb") as f:
+        annotations = pickle.load(f)
+
+
+    print("=" * 50)
+    print("PKL TYPE")
+    print("=" * 50)
+
+    print(type(annotations))
+
+
+    print("\n" + "=" * 50)
+    print("VIDEO KEYS")
+    print("=" * 50)
+
+    print(list(annotations.keys())[:5])
+
+
+    # choose first video
+    video_id = list(annotations.keys())[0]
+
+    print("\nSelected video:")
+    print(video_id)
+
+
+    video = annotations[video_id]
+
+
+    print("\n" + "=" * 50)
+    print("VIDEO STRUCTURE")
+    print("=" * 50)
+
+    print(type(video))
     print(video.keys())
 
-    clip = video["13286"]
 
+    # choose first clip
+
+    clip_id = list(video.keys())[0]
+
+    print("\nSelected clip:")
+    print(clip_id)
+
+
+    clip = video[clip_id]
+
+
+    print("\n" + "=" * 50)
+    print("CLIP STRUCTURE")
+    print("=" * 50)
+
+    print(type(clip))
     print(clip.keys())
 
-    print(clip["frame_boxes_dct"].keys())
 
-    box = clip["frame_boxes_dct"][13281][0]
+    # frame boxes
 
+    frame_boxes = clip["frame_boxes_dct"]
+
+
+    print("\n" + "=" * 50)
+    print("FRAME BOXES")
+    print("=" * 50)
+
+    print(type(frame_boxes))
+
+    frame_id = list(frame_boxes.keys())[0]
+
+    print("Frame ID:")
+    print(frame_id)
+
+    boxes = frame_boxes[frame_id]
+
+
+    print("Boxes type:")
+    print(type(boxes))
+
+    print("Number of boxes:")
+    print(len(boxes))
+
+
+    # first box
+
+    box = boxes[0]
+
+
+    print("\n" + "=" * 50)
+    print("BOX INFORMATION")
+    print("=" * 50)
+
+
+    print("Box type:")
+    print(type(box))
+
+
+    print("\nBox content:")
     print(box)
+
+
+    print("\nBox keys (if dict):")
+
+    if isinstance(box, dict):
+        print(box.keys())
+
+
+    print("\nBox attributes:")
+
+    if hasattr(box, "__dict__"):
+        print(box.__dict__)
+    else:
+        print("No __dict__")
+
+
+    # ==========================
+    # Path check
+    # ==========================
+
+    print("\n" + "=" * 50)
+    print("IMAGE PATH CHECK")
+    print("=" * 50)
+
+
+    videos_path = Path(
+        "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_/videos"
+    )
+
+
+    image_path = (
+        videos_path
+        /
+        str(video_id)
+        /
+        str(clip_id)
+        /
+        f"{frame_id}.jpg"
+    )
+
+
+    print(image_path)
+
+    print("Exists:")
+    print(image_path.exists())
+
+
+
+    # ==========================
+    # Check categories
+    # ==========================
+
+    print("\n" + "=" * 50)
+    print("CATEGORIES")
+    print("=" * 50)
+
+
+    print("Clip category:")
+    print(clip["category"])
+
+
+    if isinstance(box, dict):
+        print("Player category:")
+        print(box["category"])
