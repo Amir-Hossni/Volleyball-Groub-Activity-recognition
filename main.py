@@ -1,5 +1,6 @@
 
 from pathlib import Path
+import pickle
 
 import yaml
 from torch.utils.data import DataLoader
@@ -165,35 +166,20 @@ if __name__ == "__main__":
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
-    import time as timer
-    import torch
+    annotations = pickle.load(open("annot_all.pkl","rb"))
 
-    print("\nTesting Full Training Step...")
+    print(annotations.keys())
 
-    batch = next(iter(train_loader))
+    video = annotations["0"]
 
-    images = batch["image"].to(device)
-    labels = batch["player_label"].to(device)
+    print(video.keys())
 
-    model.train()
+    clip = video["13286"]
 
-    torch.cuda.synchronize()
+    print(clip.keys())
 
-    start = timer.time()
+    print(clip["frame_boxes_dct"].keys())
 
-    optimizer.zero_grad()
+    box = clip["frame_boxes_dct"][13281][0]
 
-    output = model(images)
-
-    loss = criterion(output, labels)
-
-    loss.backward()
-
-    optimizer.step()
-
-    torch.cuda.synchronize()
-
-    end = timer.time()
-
-    print("One training step time:", end - start)
-    print("Loss:", loss.item())
+    print(box)
