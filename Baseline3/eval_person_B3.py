@@ -26,15 +26,16 @@ def evaluate_person(
 
         labels = batch["player_label"].to(device)
 
-
+        B, P, C, H, W = images.shape
+        
+        images = images.view( B * P, C, H, W)
+        
+        labels = labels.view(-1)
 
         outputs = model(images)
 
 
-        loss = criterion(
-            outputs,
-            labels
-        )
+        loss = criterion(outputs, labels)
 
 
         total_loss += loss.item()
@@ -45,24 +46,22 @@ def evaluate_person(
             dim=1
         )
 
+        # remove padded players
+        mask = labels != -1
+        
+        predictions = predictions[mask]
 
+        labels = labels[mask]
+        
         all_predictions.append(
             predictions
         )
 
-        all_targets.append(
-            labels
-        )
+        all_targets.append(labels)
 
+    predictions = torch.cat(all_predictions)
 
-
-    predictions = torch.cat(
-        all_predictions
-    )
-
-    targets = torch.cat(
-        all_targets
-    )
+    targets = torch.cat(all_targets)
 
 
     metrics = calculate_metrics(

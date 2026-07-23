@@ -64,7 +64,7 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person",
+    mode="person_grouped",
     transform=transform
 )
 
@@ -72,7 +72,7 @@ val_dataset = VolleyballDataset(
 # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
-    batch_size=16,
+    batch_size=64,
     shuffle=True,
     num_workers=4,
     pin_memory=True,
@@ -82,7 +82,7 @@ train_loader = DataLoader(
 
 val_loader = DataLoader(
     val_dataset,
-    batch_size=16,
+    batch_size=64,
     shuffle=False,
     num_workers=4,
     pin_memory=True,
@@ -125,7 +125,9 @@ model = model.to(device)
 
 
 # Loss
-criterion = torch.nn.CrossEntropyLoss()
+criterion = criterion = torch.nn.CrossEntropyLoss(
+    ignore_index=-1
+)
 
 # Optimizer
 optimizer = torch.optim.AdamW(
@@ -153,192 +155,17 @@ if __name__ == "__main__":
     # )
     
     
-#     train_person_B3(
-#     model,
-#     train_loader,
-#     val_loader,
-#     criterion,
-#     optimizer,
-#     device,
-#     epochs=50,
-#     save_path="/kaggle/working/best_B3_person_model.pth"
-# )
+    train_person_B3(
+    model,
+    train_loader,
+    val_loader,
+    criterion,
+    optimizer,
+    device,
+    epochs=50,
+    save_path="/kaggle/working/best_B3_person_model.pth"
+)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
-    import pickle
-    from pathlib import Path
-
-
-    # ==========================
-    # Change this path
-    # ==========================
-
-    pkl_path = "/kaggle/input/datasets/amirhossni/annot-dataset/annot_all.pkl"
-
-
-    # ==========================
-    # Load PKL
-    # ==========================
-
-    with open(pkl_path, "rb") as f:
-        annotations = pickle.load(f)
-
-
-    print("=" * 50)
-    print("PKL TYPE")
-    print("=" * 50)
-
-    print(type(annotations))
-
-
-    print("\n" + "=" * 50)
-    print("VIDEO KEYS")
-    print("=" * 50)
-
-    print(list(annotations.keys())[:5])
-
-
-    # choose first video
-    video_id = list(annotations.keys())[0]
-
-    print("\nSelected video:")
-    print(video_id)
-
-
-    video = annotations[video_id]
-
-
-    print("\n" + "=" * 50)
-    print("VIDEO STRUCTURE")
-    print("=" * 50)
-
-    print(type(video))
-    print(video.keys())
-
-
-    # choose first clip
-
-    clip_id = list(video.keys())[0]
-
-    print("\nSelected clip:")
-    print(clip_id)
-
-
-    clip = video[clip_id]
-
-
-    print("\n" + "=" * 50)
-    print("CLIP STRUCTURE")
-    print("=" * 50)
-
-    print(type(clip))
-    print(clip.keys())
-
-
-    # frame boxes
-
-    frame_boxes = clip["frame_boxes_dct"]
-
-
-    print("\n" + "=" * 50)
-    print("FRAME BOXES")
-    print("=" * 50)
-
-    print(type(frame_boxes))
-
-    frame_id = list(frame_boxes.keys())[0]
-
-    print("Frame ID:")
-    print(frame_id)
-
-    boxes = frame_boxes[frame_id]
-
-
-    print("Boxes type:")
-    print(type(boxes))
-
-    print("Number of boxes:")
-    print(len(boxes))
-
-
-    # first box
-
-    box = boxes[0]
-
-
-    print("\n" + "=" * 50)
-    print("BOX INFORMATION")
-    print("=" * 50)
-
-
-    print("Box type:")
-    print(type(box))
-
-
-    print("\nBox content:")
-    print(box)
-
-
-    print("\nBox keys (if dict):")
-
-    if isinstance(box, dict):
-        print(box.keys())
-
-
-    print("\nBox attributes:")
-
-    if hasattr(box, "__dict__"):
-        print(box.__dict__)
-    else:
-        print("No __dict__")
-
-
-    # ==========================
-    # Path check
-    # ==========================
-
-    print("\n" + "=" * 50)
-    print("IMAGE PATH CHECK")
-    print("=" * 50)
-
-
-    videos_path = Path(
-        "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_/videos"
-    )
-
-
-    image_path = (
-        videos_path
-        /
-        str(video_id)
-        /
-        str(clip_id)
-        /
-        f"{frame_id}.jpg"
-    )
-
-
-    print(image_path)
-
-    print("Exists:")
-    print(image_path.exists())
-
-
-
-    # ==========================
-    # Check categories
-    # ==========================
-
-    print("\n" + "=" * 50)
-    print("CATEGORIES")
-    print("=" * 50)
-
-
-    print("Clip category:")
-    print(clip["category"])
-
-
-    if isinstance(box, dict):
-        print("Player category:")
-        print(box["category"])
+   

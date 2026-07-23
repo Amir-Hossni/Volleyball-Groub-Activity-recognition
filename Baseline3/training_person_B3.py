@@ -27,18 +27,19 @@ def train_person_one_epoch(
 
     for batch in train_loader:
 
-
         images = batch["image"].to(device)
 
         labels = batch["player_label"].to(device)
+        
+        B, P, C, H, W = images.shape
 
+        images = images.view( B * P, C, H, W)
 
+        labels = labels.view(-1)
 
         optimizer.zero_grad()
 
-
         outputs = model(images)
-
 
         loss = criterion(
             outputs,
@@ -62,7 +63,13 @@ def train_person_one_epoch(
         )
 
 
-
+        mask = labels != -1
+                
+        predictions = predictions[mask]
+        
+        labels = labels[mask]
+        
+        
         all_predictions.append(
             predictions
         )

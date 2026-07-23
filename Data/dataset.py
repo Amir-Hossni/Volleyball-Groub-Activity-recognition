@@ -81,6 +81,14 @@ class VolleyballDataset(Dataset):
                     )
 
 
+                elif self.mode == "person_grouped":
+
+                    self._add_person_grouped_samples(
+                        video_id,
+                        clip_id,
+                        frame_boxes,
+                        scene_label
+                        )
                 # ==========================
                 # B1
                 # Frame level
@@ -170,7 +178,43 @@ class VolleyballDataset(Dataset):
 
 
 
+    def _add_person_grouped_samples(
+        self,
+        video_id,
+        clip_id,
+        frame_boxes,
+        scene_label):
 
+        for frame_id, boxes in frame_boxes.items():
+
+            self.samples.append(
+                {
+
+                    "video_id": video_id,
+
+                    "clip_id": clip_id,
+
+                    "frame_id": frame_id,
+
+
+                    "frame_path":
+                        self.videos_path
+                        /
+                        video_id
+                        /
+                        clip_id
+                        /
+                        f"{frame_id}.jpg",
+
+
+                    "boxes": boxes,
+
+
+                    "scene_label":
+                        scene_label
+
+                }
+            )
 
     def _add_frame_samples(
         self,
@@ -255,68 +299,46 @@ class VolleyballDataset(Dataset):
 
         sample = self.samples[index]
 
-
-
-        # ==========================
-        # B2 / B3
-        # ==========================
-
+    
         if self.mode == "person":
-
 
             image = self._load_image(
                 sample["frame_path"]
             )
-
 
             image = self._crop_player(
                 image,
                 sample["box"]
             )
 
-
             if self.transform:
 
                 image = self.transform(image)
 
 
-
             return {
 
-
                 "image": image,
-
 
                 "player_label":
                     self.player_to_idx[
                         sample["player_label"]
                     ],
 
-
                 "scene_label":
                     sample["scene_label"],
-
-
 
                 "bbox":
                     sample["box"]["box"],
 
-
-
                 "player_id":
                     sample["box"]["player_ID"],
-
-
 
                 "video_id":
                     sample["video_id"],
 
-
-
                 "clip_id":
                     sample["clip_id"],
-
-
 
                 "frame_id":
                     sample["frame_id"]
@@ -325,10 +347,104 @@ class VolleyballDataset(Dataset):
 
 
 
+        elif self.mode == "person_grouped":
 
-        # ==========================
-        # B1
-        # ==========================
+            image = self._load_image(
+                sample["frame_path"]
+            )
+
+
+            player_images = []
+
+            player_labels = []
+
+
+            # keep fixed player order
+            boxes = sorted(
+                sample["boxes"],
+                key=lambda x: x["player_ID"]
+            )
+
+
+            for box in boxes:
+
+
+                crop = self._crop_player(
+                    image,
+                    box
+                )
+
+
+                if self.transform:
+
+                    crop = self.transform(crop)
+
+
+                player_images.append(crop)
+
+
+                player_labels.append(
+                    self.player_to_idx[
+                        box["category"]
+                    ]
+                )
+
+
+            # Padding missing players
+            while len(player_images) < 12:
+
+
+                player_images.append(
+                    torch.zeros_like(
+                        player_images[0]
+                    )
+                )
+
+
+                # ignored later during loss
+                player_labels.append(-1)
+
+
+
+            player_images = torch.stack(
+                player_images
+            )
+
+
+            player_labels = torch.tensor(
+                player_labels,
+                dtype=torch.long
+            )
+
+
+            return {
+
+                "images":
+                    player_images,
+
+
+                "player_labels":
+                    player_labels,
+
+
+                "scene_label":
+                    sample["scene_label"],
+
+
+                "video_id":
+                    sample["video_id"],
+
+
+                "clip_id":
+                    sample["clip_id"],
+
+
+                "frame_id":
+                    sample["frame_id"]
+
+            }
+            
+        
 
         elif self.mode == "frame":
 
