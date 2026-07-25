@@ -54,27 +54,18 @@ class VolleyballDataset(Dataset):
 
         for video_id, clips in self.annotations.items():
 
-
             if video_id not in self.split_ids:
                 continue
 
-
             for clip_id, clip_data in clips.items():
 
-
                 category = clip_data["category"]
-
                 frame_boxes = clip_data["frame_boxes_dct"]
-
 
                 scene_label = self.scene_to_idx[category]
 
-
-                # ==========================
                 # B2 / B3
                 # Person level
-                # ==========================
-
                 if self.mode == "person":
 
                     self._add_person_samples(
@@ -93,11 +84,9 @@ class VolleyballDataset(Dataset):
                         frame_boxes,
                         scene_label
                         )
-                # ==========================
+            
                 # B1
                 # Frame level
-                # ==========================
-
                 elif self.mode == "frame":
 
                     self._add_frame_samples(

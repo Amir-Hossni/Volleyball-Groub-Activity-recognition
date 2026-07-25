@@ -30,24 +30,29 @@ def train_person_one_epoch(
         images = batch["images"].to(device)
 
         labels = batch["player_labels"].to(device)
-        
+
+
         B, P, C, H, W = images.shape
 
-        images = images.view( B * P, C, H, W)
+        images = images.view(B * P, C, H, W)
 
         labels = labels.view(-1)
 
+
         optimizer.zero_grad()
+
 
         outputs = model(images)
 
 
+        # Ignore padded players
+        mask = labels != -1
 
-        mask = targets != -1
+        outputs = outputs[mask]
 
-        predictions = predictions[mask]
-        targets = targets[mask]
-        
+        labels = labels[mask]
+
+
         loss = criterion(
             outputs,
             labels
@@ -59,17 +64,15 @@ def train_person_one_epoch(
         optimizer.step()
 
 
-
         total_loss += loss.item()
-
 
 
         predictions = torch.argmax(
             outputs,
             dim=1
         )
-        
-        
+
+
         all_predictions.append(
             predictions
         )
@@ -78,7 +81,6 @@ def train_person_one_epoch(
         all_targets.append(
             labels
         )
-
 
 
     predictions = torch.cat(
@@ -91,7 +93,6 @@ def train_person_one_epoch(
     )
 
 
-
     metrics = calculate_metrics(
         predictions,
         targets,
@@ -99,12 +100,10 @@ def train_person_one_epoch(
     )
 
 
-
     epoch_loss = (
         total_loss /
         len(train_loader)
     )
-
 
 
     return epoch_loss, metrics
