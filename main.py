@@ -19,7 +19,7 @@ from Baseline3.training_person_B3 import train_person_B3
 
 # from Data.create_annot_pkl import create_pkl_version
 
-from Data.new_dataset import VolleyballDatasetN, flatten_person_batch
+
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -50,47 +50,47 @@ transform = prepare_model(image_level=False)
 
 
 # Dataset
-# train_dataset = VolleyballDataset(
-#     videos_path=videos_path,
-#     pkl_path=pkl_path,
-#     split_ids=train_ids,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     mode="person_grouped",
-#     transform=transform
-# )
+train_dataset = VolleyballDataset(
+    videos_path=videos_path,
+    pkl_path=pkl_path,
+    split_ids=train_ids,
+    scene_to_idx=scene_to_idx,
+    player_to_idx=player_to_idx,
+    mode="person_grouped",
+    transform=transform
+)
 
-# val_dataset = VolleyballDataset(
-#     videos_path=videos_path,
-#     pkl_path=pkl_path,
-#     split_ids=val_ids,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     mode="person_grouped",
-#     transform=transform
-# )
+val_dataset = VolleyballDataset(
+    videos_path=videos_path,
+    pkl_path=pkl_path,
+    split_ids=val_ids,
+    scene_to_idx=scene_to_idx,
+    player_to_idx=player_to_idx,
+    mode="person_grouped",
+    transform=transform
+)
 
 
 # # DataLoader
-# train_loader = DataLoader(
-#     dataset=train_dataset,
-#     batch_size=16,
-#     shuffle=True,
-#     num_workers=4,
-#     pin_memory=True,
-#     persistent_workers=True,
-#     prefetch_factor=2
-# )
+train_loader = DataLoader(
+    dataset=train_dataset,
+    batch_size=16,
+    shuffle=True,
+    num_workers=4,
+    pin_memory=True,
+    persistent_workers=True,
+    prefetch_factor=2
+)
 
-# val_loader = DataLoader(
-#     val_dataset,
-#     batch_size=16,
-#     shuffle=False,
-#     num_workers=4,
-#     pin_memory=True,
-#     persistent_workers=True,
-#     prefetch_factor=2
-# )
+val_loader = DataLoader(
+    val_dataset,
+    batch_size=16,
+    shuffle=False,
+    num_workers=4,
+    pin_memory=True,
+    persistent_workers=True,
+    prefetch_factor=2
+)
 
 
 # Device
@@ -156,75 +156,18 @@ if __name__ == "__main__":
     # )
     
     
-#     train_person_B3(
-#     model,
-#     train_loader,
-#     val_loader,
-#     criterion,
-#     optimizer,
-#     device,
-#     epochs=50,
-#     save_path="/kaggle/working/best_B3_person_model.pth"
-# )
+    train_person_B3(
+    model,
+    train_loader,
+    val_loader,
+    criterion,
+    optimizer,
+    device,
+    epochs=50,
+    save_path="/kaggle/working/best_B3_person_model.pth"
+)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     
-    print("Creating Dataset...")
-
-    ds = VolleyballDatasetN(
-        videos_path=videos_path,
-        pkl_path=pkl_path,
-        split_ids=train_ids,
-        scene_to_idx=scene_to_idx,
-        player_to_idx=player_to_idx,
-        mode="person",
-        transform=transform
-    )
-
-    print(f"Dataset size: {len(ds)} samples")
-
-
-    loader = DataLoader(
-        ds,
-        batch_size=16,
-        shuffle=True,
-        num_workers=4,
-        persistent_workers=True,
-        prefetch_factor=4,
-        pin_memory=True
-    )
-
-    print(f"DataLoader batches: {len(loader)}")
-    print("Starting loading test...\n")
-
-
-    start_time = time.time()
-
-
-    for batch_idx, (crops, labels, mask, _scene) in enumerate(loader):
-
-        batch_time = time.time() - start_time
-
-        print("=" * 50)
-        print(f"Batch {batch_idx + 1}/{len(loader)}")
-        print(f"Time since start: {batch_time:.2f} sec")
-
-        print("Before flatten:")
-        print(" crops :", crops.shape)
-        print(" labels:", labels.shape)
-        print(" mask  :", mask.shape)
-        
-        x, y = flatten_person_batch(
-            crops,
-            labels,
-            mask
-        )
-        # x -> (N, C, H, W)
-        # y -> (N,)
-
-
-        loss = criterion(
-            model(x.to(device)),
-            y.to(device)
-)
+    

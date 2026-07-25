@@ -24,7 +24,7 @@ class VolleyballDataset(Dataset):
 
         self.pkl_path = Path(pkl_path)
 
-        self.split_ids = split_ids
+        self.split_ids = set(split_ids) if not isinstance(split_ids, set) else split_ids
 
         self.scene_to_idx = scene_to_idx
 
@@ -43,6 +43,10 @@ class VolleyballDataset(Dataset):
         self.samples = []
 
         self._build_index()
+
+        # Raw annotations are only needed while building self.samples.
+        # Release memory after index construction.
+        self.annotations = None
 
 
 
@@ -187,6 +191,13 @@ class VolleyballDataset(Dataset):
 
         for frame_id, boxes in frame_boxes.items():
 
+            # Pre-sort boxes by player_ID once during build
+            # instead of sorting on every __getitem__ call
+            sorted_boxes = sorted(
+                boxes,
+                key=lambda x: x["player_ID"]
+            )
+
             self.samples.append(
                 {
 
@@ -207,7 +218,7 @@ class VolleyballDataset(Dataset):
                         f"{frame_id}.jpg",
 
 
-                    "boxes": boxes,
+                    "boxes": sorted_boxes,
 
 
                     "scene_label":
@@ -359,11 +370,8 @@ class VolleyballDataset(Dataset):
             player_labels = []
 
 
-            # keep fixed player order
-            boxes = sorted(
-                sample["boxes"],
-                key=lambda x: x["player_ID"]
-            )
+            # Boxes are already pre-sorted by player_ID from _build_index
+            boxes = sample["boxes"]
 
 
             for box in boxes:
