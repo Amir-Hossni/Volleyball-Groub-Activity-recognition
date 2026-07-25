@@ -1,21 +1,23 @@
 
-import time
+
 from pathlib import Path
-import pickle
+
 
 import yaml
 from torch.utils.data import DataLoader
 import torch
 
-from utlis.early_stopping import EarlyStopping
 from Data.dataset import VolleyballDataset
 from Data.preprocessing import prepare_model
+
+from engine.trainer import Trainer
+from engine.adapters import flatten_person_batch
 
 # from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 
 # from Baseline2.training_B2 import train
-from Baseline3.training_person_B3 import train_person_B3
+
 
 # from Data.create_annot_pkl import create_pkl_version
 
@@ -127,7 +129,7 @@ model = model.to(device)
 
 
 # Loss
-criterion = criterion = torch.nn.CrossEntropyLoss(
+criterion = torch.nn.CrossEntropyLoss(
     ignore_index=-1
 )
 
@@ -137,9 +139,34 @@ optimizer = torch.optim.AdamW(
     lr=1e-4
 )
 
-early_stopping = EarlyStopping(
-    patience=10,
-    mode="max"
+
+trainer = Trainer(
+
+    model=model,
+
+    optimizer=optimizer,
+
+    criterion=criterion,
+
+    device=device,
+
+    adapter=lambda batch:
+        flatten_person_batch(
+            batch,
+            input_key="images",
+            target_key="player_labels",
+            ignore_index=-1
+        ),
+
+    num_classes=len(player_to_idx),
+
+    save_path=
+    "/kaggle/working/best_B3_person_model.pth",
+
+    log_name="B3_person",
+
+    epochs=50
+
 )
 
 if __name__ == "__main__":
@@ -156,16 +183,13 @@ if __name__ == "__main__":
     # )
     
     
-    train_person_B3(
-    model,
-    train_loader,
-    val_loader,
-    criterion,
-    optimizer,
-    device,
-    epochs=50,
-    save_path="/kaggle/working/best_B3_person_model.pth"
-)
+    trainer.fit(
+
+        train_loader,
+
+        val_loader
+
+    )
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     

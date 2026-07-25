@@ -187,6 +187,11 @@ class VolleyballDataset(Dataset):
                 key=lambda x: x["player_ID"]
             )
 
+            # Pre-resolve player label strings to integer indices
+            # to avoid dict lookups inside the hot __getitem__ path.
+            for box in sorted_boxes:
+                box["label_idx"] = self.player_to_idx[box["category"]]
+
             self.samples.append(
                 {
 
@@ -354,52 +359,106 @@ class VolleyballDataset(Dataset):
             )
 
 
-            player_images = []
-
-            player_labels = []
-
-
             # Boxes are already pre-sorted by player_ID from _build_index
+            # and contain pre-resolved label_idx from index building.
             boxes = sample["boxes"]
+            num_boxes = len(boxes)
 
 
-            for box in boxes:
+            # Pre-allocate lists for the fixed 12-player maximum
+            player_images = [None] * 12
+
+            player_labels = [None] * 12
 
 
-                crop = self._crop_player(
-                    image,
-                    box
-                )
+            # Shared zero tensor for padding missing players
+            # Cached as None initially, created on first pad
+            pad_tensor = None
 
 
-                if self.transform:
+            if self.transform:
+
+                for i in range(num_boxes):
+
+                    box = boxes[i]
+
+
+                    crop = self._crop_player(
+                        image,
+                        box
+                    )
+
 
                     crop = self.transform(crop)
 
 
-                player_images.append(crop)
+                    player_images[i] = crop
 
 
-                player_labels.append(
-                    self.player_to_idx[
-                        box["category"]
-                    ]
-                )
+                    player_labels[i] = box["label_idx"]
 
 
-            # Padding missing players
-            while len(player_images) < 12:
+                # Pad with zero tensors for missing players
+                for i in range(num_boxes, 12):
 
 
-                player_images.append(
-                    torch.zeros_like(
-                        player_images[0]
+                    if pad_tensor is None:
+
+                        # Create a zero tensor with the same shape as a transformed crop
+                        # by applying transform to a dummy crop.
+                        # Clone to keep each padded entry independent.
+                        dummy_box = boxes[0]
+
+                        dummy_crop = self._crop_player(
+                            image,
+                            dummy_box
+                        )
+
+                        pad_tensor = self.transform(
+                            dummy_crop
+                        ) * 0.0
+
+
+                    player_images[i] = pad_tensor.clone()
+
+
+                    player_labels[i] = -1
+
+
+            else:
+
+                for i in range(num_boxes):
+
+                    box = boxes[i]
+
+
+                    crop = self._crop_player(
+                        image,
+                        box
                     )
-                )
 
 
-                # ignored later during loss
-                player_labels.append(-1)
+                    player_images[i] = crop
+
+
+                    player_labels[i] = box["label_idx"]
+
+
+                # Pad with zero tensors for missing players
+                for i in range(num_boxes, 12):
+
+
+                    if pad_tensor is None:
+
+                        pad_tensor = torch.zeros_like(
+                            player_images[0]
+                        )
+
+
+                    player_images[i] = pad_tensor.clone()
+
+
+                    player_labels[i] = -1
 
 
 
