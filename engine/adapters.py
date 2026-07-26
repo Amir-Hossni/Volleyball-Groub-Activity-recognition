@@ -28,7 +28,6 @@ def flatten_person_batch(
 ):
     """
     Convert:
-
     images:
         (B,P,C,H,W)
 

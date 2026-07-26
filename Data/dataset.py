@@ -49,7 +49,6 @@ class VolleyballDataset(Dataset):
         self.annotations = None
 
 
-
     def _build_index(self):
 
         for video_id, clips in self.annotations.items():
@@ -96,13 +95,8 @@ class VolleyballDataset(Dataset):
                         scene_label
                     )
 
-
-                # ==========================
                 # Temporal models
-                # ==========================
-
                 elif self.mode == "clip":
-
 
                     self.samples.append(
                         {
@@ -113,13 +107,8 @@ class VolleyballDataset(Dataset):
                         }
                     )
 
-
                 else:
-
-                    raise ValueError(
-                        "mode must be person, frame or clip"
-                    )
-
+                    raise ValueError("mode must be person, frame or clip")
 
 
 
@@ -131,21 +120,17 @@ class VolleyballDataset(Dataset):
         scene_label
     ):
 
-
         for frame_id, boxes in frame_boxes.items():
 
             for box in boxes:
 
-
                 self.samples.append(
                     {
-
                         "video_id": video_id,
 
                         "clip_id": clip_id,
 
                         "frame_id": frame_id,
-
 
                         "frame_path":
                             self.videos_path
@@ -156,19 +141,15 @@ class VolleyballDataset(Dataset):
                             /
                             f"{frame_id}.jpg",
 
-
                         "box": box,
-
 
                         "player_label":
                             box["category"],
-
 
                         "scene_label":
                             scene_label
                     }
                 )
-
 
 
     def _add_person_grouped_samples(
@@ -194,13 +175,11 @@ class VolleyballDataset(Dataset):
 
             self.samples.append(
                 {
-
                     "video_id": video_id,
 
                     "clip_id": clip_id,
 
                     "frame_id": frame_id,
-
 
                     "frame_path":
                         self.videos_path
@@ -211,13 +190,10 @@ class VolleyballDataset(Dataset):
                         /
                         f"{frame_id}.jpg",
 
-
                     "boxes": sorted_boxes,
-
 
                     "scene_label":
                         scene_label
-
                 }
             )
 
@@ -235,13 +211,11 @@ class VolleyballDataset(Dataset):
 
             self.samples.append(
                 {
-
                     "video_id": video_id,
 
                     "clip_id": clip_id,
 
                     "frame_id": frame_id,
-
 
                     "frame_path":
                         self.videos_path
@@ -252,15 +226,12 @@ class VolleyballDataset(Dataset):
                         /
                         f"{frame_id}.jpg",
 
-
                     "boxes": boxes,
-
 
                     "scene_label": scene_label
 
                 }
             )
-
 
 
 
@@ -271,58 +242,35 @@ class VolleyballDataset(Dataset):
 
 
 
-
     def _load_image(self, path):
-
+        
         return Image.open(path).convert("RGB")
-
-
 
 
 
     def _crop_player(self, image, box):
 
-
         x1, y1, x2, y2 = box["box"]
 
-
-        return image.crop(
-            (
-                x1,
-                y1,
-                x2,
-                y2
-            )
-        )
-
-
+        return image.crop((x1, y1, x2, y2))
 
 
 
     def __getitem__(self, index):
 
-
         sample = self.samples[index]
-
     
         if self.mode == "person":
 
-            image = self._load_image(
-                sample["frame_path"]
-            )
+            image = self._load_image(sample["frame_path"])
 
-            image = self._crop_player(
-                image,
-                sample["box"]
-            )
+            image = self._crop_player(image, sample["box"])
 
             if self.transform:
-
                 image = self.transform(image)
 
 
             return {
-
                 "image": image,
 
                 "player_label":
@@ -351,13 +299,9 @@ class VolleyballDataset(Dataset):
             }
 
 
-
         elif self.mode == "person_grouped":
 
-            image = self._load_image(
-                sample["frame_path"]
-            )
-
+            image = self._load_image(sample["frame_path"])
 
             # Boxes are already pre-sorted by player_ID from _build_index
             # and contain pre-resolved label_idx from index building.
@@ -367,7 +311,6 @@ class VolleyballDataset(Dataset):
 
             # Pre-allocate lists for the fixed 12-player maximum
             player_images = [None] * 12
-
             player_labels = [None] * 12
 
 
@@ -375,224 +318,125 @@ class VolleyballDataset(Dataset):
             # Cached as None initially, created on first pad
             pad_tensor = None
 
-
             if self.transform:
 
                 for i in range(num_boxes):
 
                     box = boxes[i]
-
-
-                    crop = self._crop_player(
-                        image,
-                        box
-                    )
-
+                    crop = self._crop_player(image, box)
 
                     crop = self.transform(crop)
-
-
                     player_images[i] = crop
-
-
                     player_labels[i] = box["label_idx"]
 
 
                 # Pad with zero tensors for missing players
                 for i in range(num_boxes, 12):
 
-
                     if pad_tensor is None:
-
                         # Create a zero tensor with the same shape as a transformed crop
                         # by applying transform to a dummy crop.
                         # Clone to keep each padded entry independent.
                         dummy_box = boxes[0]
+                        dummy_crop = self._crop_player(image, dummy_box)
 
-                        dummy_crop = self._crop_player(
-                            image,
-                            dummy_box
-                        )
-
-                        pad_tensor = self.transform(
-                            dummy_crop
-                        ) * 0.0
-
+                        pad_tensor = self.transform(dummy_crop) * 0.0
 
                     player_images[i] = pad_tensor.clone()
-
-
                     player_labels[i] = -1
-
 
             else:
 
                 for i in range(num_boxes):
 
                     box = boxes[i]
-
-
-                    crop = self._crop_player(
-                        image,
-                        box
-                    )
-
+                    crop = self._crop_player(image, box)
 
                     player_images[i] = crop
-
-
                     player_labels[i] = box["label_idx"]
 
 
                 # Pad with zero tensors for missing players
                 for i in range(num_boxes, 12):
-
-
                     if pad_tensor is None:
-
-                        pad_tensor = torch.zeros_like(
-                            player_images[0]
-                        )
-
+                        pad_tensor = torch.zeros_like(player_images[0])
 
                     player_images[i] = pad_tensor.clone()
-
-
                     player_labels[i] = -1
 
-
-
-            player_images = torch.stack(
-                player_images
-            )
-
-
-            player_labels = torch.tensor(
-                player_labels,
-                dtype=torch.long
-            )
-
+            player_images = torch.stack(player_images)
+            player_labels = torch.tensor(player_labels, dtype=torch.long)
 
             return {
-
                 "images":
                     player_images,
-
 
                 "player_labels":
                     player_labels,
 
-
                 "scene_label":
                     sample["scene_label"],
-
 
                 "video_id":
                     sample["video_id"],
 
-
                 "clip_id":
                     sample["clip_id"],
 
-
                 "frame_id":
                     sample["frame_id"]
-
             }
             
         
-
         elif self.mode == "frame":
 
-
-            image = self._load_image(
-                sample["frame_path"]
-            )
-
-
+            image = self._load_image(sample["frame_path"])
             player_images = []
 
-
             for box in sample["boxes"]:
-
-
-                crop = self._crop_player(
-                    image,
-                    box
-                )
-
+                crop = self._crop_player(image, box)
 
                 if self.transform:
-
                     crop = self.transform(crop)
 
-
                 player_images.append(crop)
-
 
 
             # Padding missing players
             while len(player_images) < 12:
 
-
                 player_images.append(
-                    torch.zeros_like(
-                        player_images[0]
-                    )
+                    torch.zeros_like(player_images[0])
                 )
 
 
-
-            player_images = torch.stack(
-                player_images
-            )
-
+            player_images = torch.stack(player_images)
 
 
             return {
-
-
                 "images": player_images,
-
 
                 "scene_label":
                     sample["scene_label"],
 
-
-
                 "video_id":
                     sample["video_id"],
-
-
 
                 "clip_id":
                     sample["clip_id"],
 
-
-
                 "frame_id":
                     sample["frame_id"]
-
             }
 
-
-
-
-        # ==========================
+    
         # Clip / Temporal
-        # ==========================
-
         else:
 
-
             frames = []
-
             players = []
 
-
-
             for frame_id, boxes in sample["frame_boxes"].items():
-
 
                 image_path = (
                     self.videos_path
@@ -605,38 +449,21 @@ class VolleyballDataset(Dataset):
                 )
 
 
-                image = self._load_image(
-                    image_path
-                )
-
+                image = self._load_image(image_path)
 
                 if self.transform:
-
                     image = self.transform(image)
-
 
 
                 frames.append(image)
 
                 players.append(boxes)
 
-
-
-
             return {
-
-
                 "frames":
                     torch.stack(frames),
-
-
-
                 "players":
                     players,
-
-
-
                 "scene_label":
                     sample["scene_label"]
-
             }

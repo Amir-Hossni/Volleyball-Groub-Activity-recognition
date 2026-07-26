@@ -183,15 +183,46 @@ if __name__ == "__main__":
     # )
     
     
-    trainer.fit(
+    # trainer.fit(
 
-        train_loader,
+    #     train_loader,
 
-        val_loader
+    #     val_loader
 
-    )
+    # )
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
-    
-    
+    batch = next(iter(train_loader))
+
+    images = batch["images"]
+    labels = batch["player_labels"]
+
+    print(images.shape)
+    print(labels.shape)
+
+    print("Valid players:")
+    print((labels != -1).sum())
+
+    print("=" * 50)
+    print(f"Train Dataset      : {len(train_dataset):,}")
+    print(f"Validation Dataset : {len(val_dataset):,}")
+    print(f"Train Loader       : {len(train_loader):,}")
+    print(f"Validation Loader  : {len(val_loader):,}")
+    print("=" * 50)
+
+
+    players = []
+
+    for i in range(50):
+
+        sample = train_dataset[i]
+
+        valid = (sample["player_labels"] != -1).sum().item()
+
+        players.append(valid)
+
+
+    print("Average Players :", sum(players)/len(players))
+    print("Min Players :", min(players))
+    print("Max Players :", max(players))
