@@ -165,7 +165,7 @@ trainer = Trainer(
 
     log_name="B3_person",
 
-    epochs=1
+    epochs=50
 
 )
 

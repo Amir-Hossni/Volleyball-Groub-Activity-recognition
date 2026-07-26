@@ -2,32 +2,19 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
-
+    
 class PersonClassifierB3(nn.Module):
 
-    def __init__(self,num_classes=9,pretrained=True):
+    def __init__(self, num_classes=9, pretrained=True):
         super().__init__()
 
-        resnet = models.resnet50(weights="DEFAULT" if pretrained else None)
+        self.model = models.resnet50(weights="DEFAULT" if pretrained else None)
 
-        self.backbone = nn.Sequential(*list(resnet.children())[:-1])
+        in_features = self.model.fc.in_features
+        self.model.fc = nn.Linear(in_features, num_classes)
 
-        self.feature_dim = 2048
-
-        self.classifier = nn.Linear(self.feature_dim,num_classes)
-
-
-    def forward(self,x):
-
-        features = self.backbone(x)
-
-        features = features.view(features.size(0),-1)
-
-        logits = self.classifier(features)
-
-
-        return logits
-    
+    def forward(self, x):
+        return self.model(x)    
     
 class GroupClassifierB3(nn.Module):
 

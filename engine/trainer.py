@@ -59,17 +59,7 @@ class Trainer:
 
     def train_one_epoch(self, loader):
         
-        
-        
-        
-        
-        data_time = 0.0
-        forward_time = 0.0
-        backward_time = 0.0
-        optimizer_time = 0.0
-        metric_time = 0.0
-        
-
+      
         self.model.train()
 
         total_loss = 0
@@ -79,30 +69,15 @@ class Trainer:
         all_targets = []
 
 
-        # for batch in loader:
-        for batch_idx, batch in enumerate(loader):
-
-            t0 = time.perf_counter()
-
+        for batch in loader:
+        
             inputs, targets = self.adapter(batch)
 
             
-            if batch_idx == 0:
-                print("Batch shape:", inputs.shape)
-                print("Target shape:", targets.shape)
-
-                print("=" * 50)
-                print(f"GPU Memory Allocated : {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-                print(f"GPU Memory Reserved  : {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
-                print("=" * 50)
-        
 
             inputs = inputs.to(self.device, non_blocking=True)
             targets = targets.to(self.device, non_blocking=True)
-            ########################
-            torch.cuda.synchronize()
-            t1 = time.perf_counter()
-            ########################
+            
             # Forward
             self.optimizer.zero_grad()
 
@@ -111,27 +86,13 @@ class Trainer:
             loss = self.criterion(outputs, targets)
 
             
-            ########################
-            torch.cuda.synchronize()
-            t2 = time.perf_counter()
-            #########################
-            
             #  Backward
             loss.backward()
-            
-            #######################
-            torch.cuda.synchronize()
-            t3 = time.perf_counter()
-            #######################
             
             
             # Optimizer
             self.optimizer.step()
             
-            #######################
-            torch.cuda.synchronize()
-            t4 = time.perf_counter()
-            #######################
             
             total_loss += loss.item()
 
@@ -145,15 +106,7 @@ class Trainer:
             all_targets.append(targets)
             t5 = time.perf_counter()
             
-            
-               # accumulate
-            # -------------------------
-            data_time += t1 - t0
-            forward_time += t2 - t1
-            backward_time += t3 - t2
-            optimizer_time += t4 - t3
-            metric_time += t5 - t4
-            ###################################
+        
         predictions = torch.cat(all_predictions)
 
         targets = torch.cat(all_targets)
@@ -163,17 +116,6 @@ class Trainer:
             targets,
             num_classes=self.num_classes
         )
-
-
-
-
-        print("\n========== TRAIN PROFILE ==========")
-        print(f"Data + Transfer : {data_time:.2f} sec")
-        print(f"Forward         : {forward_time:.2f} sec")
-        print(f"Backward        : {backward_time:.2f} sec")
-        print(f"Optimizer       : {optimizer_time:.2f} sec")
-        print(f"Metrics         : {metric_time:.2f} sec")
-        print("===================================\n")
 
         return (
             total_loss / len(loader),
