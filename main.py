@@ -11,6 +11,7 @@ from Data.dataset import VolleyballDataset
 from Data.preprocessing import prepare_model
 
 from engine.trainer import Trainer
+from engine.new_trainer import New_Trainer
 from engine.adapters import flatten_person_batch
 
 # from Baseline2.model_B2 import B2Model
@@ -140,7 +141,38 @@ optimizer = torch.optim.AdamW(
 )
 
 
-trainer = Trainer(
+# trainer = Trainer(
+
+#     model=model,
+
+#     optimizer=optimizer,
+
+#     criterion=criterion,
+
+#     device=device,
+
+#     adapter=lambda batch:
+#         flatten_person_batch(
+#             batch,
+#             input_key="images",
+#             target_key="player_labels",
+#             ignore_index=-1
+#         ),
+
+#     num_classes=len(player_to_idx),
+
+#     save_path=
+#     "/kaggle/working/best_B3_person_model.pth",
+
+#     log_name="B3_person",
+
+#     epochs=50
+
+# )
+
+
+
+trainer = New_Trainer(
 
     model=model,
 
@@ -160,13 +192,15 @@ trainer = Trainer(
 
     num_classes=len(player_to_idx),
 
-    save_path=
-    "/kaggle/working/best_B3_person_model.pth",
+    save_path="/kaggle/working/best_B3_person_model.pth",
 
     log_name="B3_person",
 
-    epochs=50
+    epochs=50,
 
+    use_amp=True,
+
+    grad_clip=None,
 )
 
 if __name__ == "__main__":

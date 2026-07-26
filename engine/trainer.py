@@ -110,7 +110,7 @@ class Trainer:
             all_predictions.append(predictions)
 
             all_targets.append(targets)
-            t5 = time.perf_counter()
+            
             
         
         predictions = torch.cat(all_predictions)
