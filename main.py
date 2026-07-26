@@ -114,9 +114,15 @@ device = torch.device(
 # )
 
 # B3
+# model = PersonClassifierB3(
+#     num_classes=len(player_to_idx),
+#     pretrained=True
+# )
+
 model = PersonClassifierB3(
     num_classes=len(player_to_idx),
-    pretrained=True
+    pretrained=True,
+    freeze_backbone=False
 )
 # person_model.load_state_dict(torch.load("person.pth"))
 # backbone = person_model.backbone

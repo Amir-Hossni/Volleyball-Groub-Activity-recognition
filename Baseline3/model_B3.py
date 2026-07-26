@@ -1,20 +1,81 @@
+
 import torch
 import torch.nn as nn
 from torchvision import models
+from torchvision.models import ResNet50_Weights
 
+
+def get_device(prefer_cuda=True):
+    """Single source of truth for the device. Use this everywhere -
+    model, trainer, evaluator - so CPU/GPU never disagree."""
+    if prefer_cuda and torch.cuda.is_available():
+        return torch.device("cuda")
+    return torch.device("cpu")
     
 class PersonClassifierB3(nn.Module):
+    """Baseline 3: person-level action classifier.
 
-    def __init__(self, num_classes=9, pretrained=True):
+    Input : cropped person bounding boxes  (B, 3, H, W)
+    Output: logits over the 9 individual action classes, or the pooled
+            2048-d backbone features when return_features=True.
+    """
+
+    def __init__(
+        self,
+        num_classes=9,
+        pretrained=True,
+        freeze_backbone=False,
+    ):
         super().__init__()
 
-        self.model = models.resnet50(weights="DEFAULT" if pretrained else None)
+        # Pinned checkpoint - "DEFAULT" silently changes across torchvision
+        # releases, which breaks reproducibility between baselines.
+        weights = ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
 
-        in_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(in_features, num_classes)
+        self.backbone = models.resnet50(weights=weights)
 
-    def forward(self, x):
-        return self.model(x)    
+        self.feature_dim = self.backbone.fc.in_features  # 2048
+        self.backbone.fc = nn.Identity()
+
+        self.classifier = nn.Linear(self.feature_dim, num_classes)
+
+        if freeze_backbone:
+            self.freeze_backbone()
+
+    def freeze_backbone(self):
+        for param in self.backbone.parameters():
+            param.requires_grad = False
+
+    def unfreeze_backbone(self):
+        for param in self.backbone.parameters():
+            param.requires_grad = True
+
+    def forward(self, x, return_features=False):
+        features = self.backbone(x)
+
+        if return_features:
+            return features
+
+        return self.classifier(features)
+
+    @torch.no_grad()
+    def extract_features(self, x):
+        """Frozen feature extraction for B4+ (temporal / hierarchical stages)."""
+        self.eval()
+        return self.backbone(x)
+
+
+def build_b3(num_classes=9, pretrained=True, freeze_backbone=False, device=None):
+    """Build the model already placed on the right device."""
+    device = device if device is not None else get_device()
+
+    model = PersonClassifierB3(
+        num_classes=num_classes,
+        pretrained=pretrained,
+        freeze_backbone=freeze_backbone,
+    )
+
+    return model.to(device)
     
 class GroupClassifierB3(nn.Module):
 
