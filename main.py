@@ -243,7 +243,7 @@ if __name__ == "__main__":
     print(f"100 batches time: {elapsed:.2f} sec")
     print(f"Average batch loading: {elapsed/100:.4f} sec")
     
-    rint(torch.cuda.device_count())
+    print(torch.cuda.device_count())
 
     for i in range(torch.cuda.device_count()):
         print(torch.cuda.get_device_name(i))
