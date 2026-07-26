@@ -53,9 +53,11 @@ class Trainer:
             mode="max"
         )
 
-
         self.best_f1 = 0
-
+        self.scaler = torch.amp.GradScaler(
+            "cuda",
+            enabled=(device.type == "cuda")
+        )
 
     def train_one_epoch(self, loader):
         
@@ -81,17 +83,21 @@ class Trainer:
             # Forward
             self.optimizer.zero_grad()
 
-            outputs = self.model(inputs)
+            with torch.amp.autocast("cuda"):
 
-            loss = self.criterion(outputs, targets)
+                outputs = self.model(inputs)
 
-            
-            #  Backward
-            loss.backward()
-            
-            
+                loss = self.criterion(outputs, targets)
+
+
+            # Backward
+            self.scaler.scale(loss).backward()
+
+
             # Optimizer
-            self.optimizer.step()
+            self.scaler.step(self.optimizer)
+
+            self.scaler.update()
             
             
             total_loss += loss.item()
