@@ -193,36 +193,57 @@ if __name__ == "__main__":
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
-    batch = next(iter(train_loader))
+    # batch = next(iter(train_loader))
 
-    images = batch["images"]
-    labels = batch["player_labels"]
+    # images = batch["images"]
+    # labels = batch["player_labels"]
 
-    print(images.shape)
-    print(labels.shape)
+    # print(images.shape)
+    # print(labels.shape)
 
-    print("Valid players:")
-    print((labels != -1).sum())
+    # print("Valid players:")
+    # print((labels != -1).sum())
 
-    print("=" * 50)
-    print(f"Train Dataset      : {len(train_dataset):,}")
-    print(f"Validation Dataset : {len(val_dataset):,}")
-    print(f"Train Loader       : {len(train_loader):,}")
-    print(f"Validation Loader  : {len(val_loader):,}")
-    print("=" * 50)
-
-
-    players = []
-
-    for i in range(50):
-
-        sample = train_dataset[i]
-
-        valid = (sample["player_labels"] != -1).sum().item()
-
-        players.append(valid)
+    # print("=" * 50)
+    # print(f"Train Dataset      : {len(train_dataset):,}")
+    # print(f"Validation Dataset : {len(val_dataset):,}")
+    # print(f"Train Loader       : {len(train_loader):,}")
+    # print(f"Validation Loader  : {len(val_loader):,}")
+    # print("=" * 50)
 
 
-    print("Average Players :", sum(players)/len(players))
-    print("Min Players :", min(players))
-    print("Max Players :", max(players))
+    # players = []
+
+    # for i in range(50):
+
+    #     sample = train_dataset[i]
+
+    #     valid = (sample["player_labels"] != -1).sum().item()
+
+    #     players.append(valid)
+
+
+    # print("Average Players :", sum(players)/len(players))
+    # print("Min Players :", min(players))
+    # print("Max Players :", max(players))
+    
+    import time
+
+    print("Testing DataLoader only")
+
+    start = time.perf_counter()
+
+    for i, batch in enumerate(train_loader):
+
+        if i == 100:
+            break
+
+    elapsed = time.perf_counter() - start
+
+    print(f"100 batches time: {elapsed:.2f} sec")
+    print(f"Average batch loading: {elapsed/100:.4f} sec")
+    
+    rint(torch.cuda.device_count())
+
+    for i in range(torch.cuda.device_count()):
+        print(torch.cuda.get_device_name(i))
