@@ -79,14 +79,15 @@ class Trainer:
         all_targets = []
 
 
-        for batch in loader:
+        # for batch in loader:
+        for batch_idx, batch in enumerate(loader):
 
             t0 = time.perf_counter()
 
             inputs, targets = self.adapter(batch)
 
             
-            if len(all_predictions) == 0:
+            if batch_idx == 0:
                 print("Batch shape:", inputs.shape)
                 print("Target shape:", targets.shape)
 
@@ -94,10 +95,7 @@ class Trainer:
                 print(f"GPU Memory Allocated : {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
                 print(f"GPU Memory Reserved  : {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
                 print("=" * 50)
-            
-            
-            print("Batch shape:", inputs.shape)
-            print("Target shape:", targets.shape)
+        
 
             inputs = inputs.to(self.device, non_blocking=True)
             targets = targets.to(self.device, non_blocking=True)
@@ -115,7 +113,7 @@ class Trainer:
             
             ########################
             torch.cuda.synchronize()
-            t2 = time.perf_counter()
+            trint("Target shape:", targets.shape)2 = time.perf_counter()
             #########################
             
             #  Backward
