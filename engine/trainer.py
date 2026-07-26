@@ -113,7 +113,7 @@ class Trainer:
             
             ########################
             torch.cuda.synchronize()
-            trint("Target shape:", targets.shape)2 = time.perf_counter()
+            t2 = time.perf_counter()
             #########################
             
             #  Backward
