@@ -5,7 +5,7 @@ from utlis.checkpoint import save_checkpoint
 from utlis.tensorboard import create_writer, log_metrics
 from utlis.early_stopping import EarlyStopping
 
-
+import time
 
 class Trainer:
 
@@ -57,101 +57,108 @@ class Trainer:
         self.best_f1 = 0
 
 
-
-
-
-    def train_one_epoch(
-        self,
-        loader
-    ):
-
+    def train_one_epoch(self, loader):
+        
+        
+        
+        
+        
+        data_time = 0.0
+        forward_time = 0.0
+        backward_time = 0.0
+        optimizer_time = 0.0
+        metric_time = 0.0
+        
 
         self.model.train()
 
-
         total_loss = 0
-
 
         all_predictions = []
 
         all_targets = []
 
 
-
         for batch in loader:
 
+            t0 = time.perf_counter()
 
+            inputs, targets = self.adapter(batch)
 
-            inputs, targets = self.adapter(
-                batch
-            )
+            
+            if len(all_predictions) == 0:
+                print("Batch shape:", inputs.shape)
+                print("Target shape:", targets.shape)
 
+                print("=" * 50)
+                print(f"GPU Memory Allocated : {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+                print(f"GPU Memory Reserved  : {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+                print("=" * 50)
+            
+            
+            print("Batch shape:", inputs.shape)
+            print("Target shape:", targets.shape)
 
-
-            inputs = inputs.to(
-                self.device
-            )
-
-            targets = targets.to(
-                self.device
-            )
-
-
-
+            inputs = inputs.to(self.device, non_blocking=True)
+            targets = targets.to(self.device, non_blocking=True)
+            ########################
+            torch.cuda.synchronize()
+            t1 = time.perf_counter()
+            ########################
+            # Forward
             self.optimizer.zero_grad()
 
+            outputs = self.model(inputs)
 
+            loss = self.criterion(outputs, targets)
 
-            outputs = self.model(
-                inputs
-            )
-
-
-
-            loss = self.criterion(
-                outputs,
-                targets
-            )
-
-
+            
+            ########################
+            torch.cuda.synchronize()
+            t2 = time.perf_counter()
+            #########################
+            
+            #  Backward
             loss.backward()
-
-
+            
+            #######################
+            torch.cuda.synchronize()
+            t3 = time.perf_counter()
+            #######################
+            
+            
+            # Optimizer
             self.optimizer.step()
-
-
-
+            
+            #######################
+            torch.cuda.synchronize()
+            t4 = time.perf_counter()
+            #######################
+            
             total_loss += loss.item()
 
 
 
-            predictions = torch.argmax(
-                outputs,
-                dim=1
-            )
+            # Metrics
+            predictions = torch.argmax(outputs, dim=1)
 
+            all_predictions.append(predictions)
 
-            all_predictions.append(
-                predictions
-            )
+            all_targets.append(targets)
+            t5 = time.perf_counter()
+            
+            
+               # accumulate
+            # -------------------------
+            data_time += t1 - t0
+            forward_time += t2 - t1
+            backward_time += t3 - t2
+            optimizer_time += t4 - t3
+            metric_time += t5 - t4
+            ###################################
+        predictions = torch.cat(all_predictions)
 
-
-            all_targets.append(
-                targets
-            )
-
-
-
-        predictions = torch.cat(
-            all_predictions
-        )
-
-
-        targets = torch.cat(
-            all_targets
-        )
-
-
+        targets = torch.cat(all_targets)
 
         metrics = calculate_metrics(
             predictions,
@@ -161,6 +168,15 @@ class Trainer:
 
 
 
+
+        print("\n========== TRAIN PROFILE ==========")
+        print(f"Data + Transfer : {data_time:.2f} sec")
+        print(f"Forward         : {forward_time:.2f} sec")
+        print(f"Backward        : {backward_time:.2f} sec")
+        print(f"Optimizer       : {optimizer_time:.2f} sec")
+        print(f"Metrics         : {metric_time:.2f} sec")
+        print("===================================\n")
+
         return (
             total_loss / len(loader),
             metrics
@@ -169,36 +185,16 @@ class Trainer:
 
 
 
-
-    def fit(
-        self,
-        train_loader,
-        val_loader
-    ):
-
-
+    def fit(self, train_loader, val_loader):
         from engine.evaluator import evaluate
-
-
 
         for epoch in range(self.epochs):
 
-
+            print("="*50)
+            print(f"Epoch [{epoch+1}/{self.epochs}]")
             print("="*50)
 
-            print(
-                f"Epoch [{epoch+1}/{self.epochs}]"
-            )
-
-            print("="*50)
-
-
-
-            train_loss, train_metrics = self.train_one_epoch(
-                train_loader
-            )
-
-
+            train_loss, train_metrics = self.train_one_epoch(train_loader)
 
             val_loss, val_metrics = evaluate(
                 self.model,
@@ -219,7 +215,6 @@ class Trainer:
 
                 "F1/train":
                     train_metrics["f1_score"],
-
 
                 "Loss/val":val_loss,
 
@@ -246,9 +241,7 @@ Val F1: {val_metrics['f1_score']:.4f}
 
             if val_metrics["f1_score"] > self.best_f1:
 
-
                 self.best_f1 = val_metrics["f1_score"]
-
 
                 model_to_save = self.model.module if isinstance(self.model, torch.nn.DataParallel) else self.model
                 save_checkpoint(
@@ -262,21 +255,14 @@ Val F1: {val_metrics['f1_score']:.4f}
                     }
                 )
 
-
                 print("Best model saved")
 
 
+            if self.early_stopping(val_metrics["f1_score"]):
 
-            if self.early_stopping(
-                val_metrics["f1_score"]
-            ):
-
-                print(
-                    "Early stopping triggered"
-                )
+                print("Early stopping triggered")
 
                 break
-
 
 
         self.writer.close()
