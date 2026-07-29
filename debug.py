@@ -216,21 +216,30 @@ train_loader = DataLoader(
     train_dataset,
     batch_size=BATCH_SIZE,
     shuffle=True,
-    pin_memory=True
+    pin_memory=True,
+    num_workers=4,
+    persistent_workers=True,
+    prefetch_factor=2
 )
 
 val_loader = DataLoader(
     val_dataset,
     batch_size=BATCH_SIZE,
     shuffle=False,
-    pin_memory=True
+    pin_memory=True,
+    num_workers=4,
+    persistent_workers=True,
+    prefetch_factor=2
 )
 
 test_loader = DataLoader(
     test_dataset,
     batch_size=BATCH_SIZE,
     shuffle=False,
-    pin_memory=True
+    pin_memory=True,
+    num_workers=4,
+    persistent_workers=True,
+    prefetch_factor=2
 )
 class B3Model(nn.Module):
     def __init__(self):
