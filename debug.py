@@ -70,51 +70,51 @@ root = "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_/videos"
 
 data = []
 
-# for video_folder_name in os.listdir(root):
-#     current_video_folder_path = os.path.join(root, video_folder_name)
+for video_folder_name in os.listdir(root):
+    current_video_folder_path = os.path.join(root, video_folder_name)
 
-#     if not os.path.isdir(current_video_folder_path):
-#         continue
+    if not os.path.isdir(current_video_folder_path):
+        continue
 
-#     annotations_path = os.path.join(current_video_folder_path, "annotations.txt")
+    annotations_path = os.path.join(current_video_folder_path, "annotations.txt")
 
-#     if not os.path.isfile(annotations_path):
-#         continue
+    if not os.path.isfile(annotations_path):
+        continue
 
-#     video_id = int(video_folder_name)
+    video_id = int(video_folder_name)
 
-#     with open(annotations_path, "r") as f:
-#         for line in f:
-#             parts = line.strip().split()
+    with open(annotations_path, "r") as f:
+        for line in f:
+            parts = line.strip().split()
 
-#             if len(parts) < 2:
-#                 continue
+            if len(parts) < 2:
+                continue
 
-#             image_filename = parts[0]                 # 13456.jpg
-#             group_label = parts[1]                    # r_spike
+            image_filename = parts[0]                 # 13456.jpg
+            group_label = parts[1]                    # r_spike
 
-#             clip_id = os.path.splitext(image_filename)[0]   # 13456
+            clip_id = os.path.splitext(image_filename)[0]   # 13456
 
-#             image_path = os.path.join(
-#                 current_video_folder_path,
-#                 clip_id,
-#                 image_filename
-#             )
+            image_path = os.path.join(
+                current_video_folder_path,
+                clip_id,
+                image_filename
+            )
 
-#             tracking_path = os.path.join(
-#                 "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_tracking_annotation/volleyball_tracking_annotation",
-#                 str(video_id),
-#                 clip_id,
-#                 f"{clip_id}.txt"
-#             )
+            tracking_path = os.path.join(
+                "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_tracking_annotation/volleyball_tracking_annotation",
+                str(video_id),
+                clip_id,
+                f"{clip_id}.txt"
+            )
 
-#             data.append({
-#                 "video_id": video_id,
-#                 "clip_id": clip_id,
-#                 "image_path": image_path,
-#                 "tracking_path": tracking_path,
-#                 "group_label": group_label
-#             })
+            data.append({
+                "video_id": video_id,
+                "clip_id": clip_id,
+                "image_path": image_path,
+                "tracking_path": tracking_path,
+                "group_label": group_label
+            })
             
 
 
@@ -167,49 +167,49 @@ class_names = [
 ]
 transform = prepare_model(image_level=False)
 
-class VolleyballDataset(Dataset):
-    def __init__(self, data, transform=None):
-        self.data = data
-        self.transform = transform
+# class VolleyballDataset(Dataset):
+#     def __init__(self, data, transform=None):
+#         self.data = data
+#         self.transform = transform
 
-    def __len__(self):
-        return len(self.data)
+#     def __len__(self):
+#         return len(self.data)
         
-    def __getitem__(self, idx):
+#     def __getitem__(self, idx):
     
-        sample = self.data[idx]
+#         sample = self.data[idx]
     
-        image = Image.open(sample["image_path"]).convert("RGB")
+#         image = Image.open(sample["image_path"]).convert("RGB")
     
-        frame_boxes = load_tracking_annot(sample["tracking_path"])
+#         frame_boxes = load_tracking_annot(sample["tracking_path"])
     
-        frame_id = list(frame_boxes.keys())[0]
+#         frame_id = list(frame_boxes.keys())[0]
     
-        player_crops = []
+#         player_crops = []
     
-        for box_info in frame_boxes[frame_id][:12]:
-            x1, y1, x2, y2 = box_info.box
+#         for box_info in frame_boxes[frame_id][:12]:
+#             x1, y1, x2, y2 = box_info.box
     
-            crop = image.crop((x1, y1, x2, y2))
+#             crop = image.crop((x1, y1, x2, y2))
     
-            if self.transform:
-                crop = self.transform(crop)
+#             if self.transform:
+#                 crop = self.transform(crop)
     
-            player_crops.append(crop)
+#             player_crops.append(crop)
     
-        while len(player_crops) < 12:
-            player_crops.append(torch.zeros(3, 224, 224))
+#         while len(player_crops) < 12:
+#             player_crops.append(torch.zeros(3, 224, 224))
     
-        player_crops = torch.stack(player_crops)
+#         player_crops = torch.stack(player_crops)
     
-        label = torch.tensor(
-            label_map[sample["group_label"]],
-            dtype=torch.long
-        )
+#         label = torch.tensor(
+#             label_map[sample["group_label"]],
+#             dtype=torch.long
+#         )
     
-        return player_crops, label
+#         return player_crops, label
     
-dataset = VolleyballDataset(train_data, transform)
+# dataset = VolleyballDataset(train_data, transform)
 LR = 1e-3
 BATCH_SIZE = 16
 EPOCHS = 40
