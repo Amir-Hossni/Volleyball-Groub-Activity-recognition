@@ -75,7 +75,7 @@ transform = prepare_model(image_level=False)
 ##datset_new_ver
 train_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
-    pkl_path=pkl_path,
+    annot_root=annot_root,
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
@@ -83,16 +83,16 @@ train_dataset = VolleyballDatasetv2(
     transform=transform
 )
 
+
 val_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
-    pkl_path=pkl_path,
+    annot_root=annot_root,
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
     mode="person_grouped",
     transform=transform
 )
-
 # # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
