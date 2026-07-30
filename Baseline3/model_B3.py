@@ -78,7 +78,7 @@ from torchvision.models import ResNet50_Weights
 #     return model.to(device)
 
 
-class GroupClassifierB3(nn.Module):
+class PersonClassifierB3(nn.Module):
 
     def __init__(self, num_classes=8, pretrained=True):
         super().__init__()
