@@ -28,7 +28,7 @@ from sklearn.metrics import (
 from Data.boxinfo import BoxInfo
 from Data.volleyball_annot_loader import load_tracking_annot
 from Data.preprocessing import prepare_model
-from Data.new_dataset import VolleyballDatasetDirect
+from Data.new_dataset import VolleyballDatasetv2
 from Data.dataset import VolleyballDataset
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -67,105 +67,105 @@ dataset_root = "/kaggle/input/datasets/ahmedmohamed365/volleyball"
     
 ###data
 ##############################################################    
-# root = "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_/videos"
+root = "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_/videos"
 
-# data = []
+data = []
 
-# for video_folder_name in os.listdir(root):
-#     current_video_folder_path = os.path.join(root, video_folder_name)
+for video_folder_name in os.listdir(root):
+    current_video_folder_path = os.path.join(root, video_folder_name)
 
-#     if not os.path.isdir(current_video_folder_path):
-#         continue
+    if not os.path.isdir(current_video_folder_path):
+        continue
 
-#     annotations_path = os.path.join(current_video_folder_path, "annotations.txt")
+    annotations_path = os.path.join(current_video_folder_path, "annotations.txt")
 
-#     if not os.path.isfile(annotations_path):
-#         continue
+    if not os.path.isfile(annotations_path):
+        continue
 
-#     video_id = int(video_folder_name)
+    video_id = int(video_folder_name)
 
-#     with open(annotations_path, "r") as f:
-#         for line in f:
-#             parts = line.strip().split()
+    with open(annotations_path, "r") as f:
+        for line in f:
+            parts = line.strip().split()
 
-#             if len(parts) < 2:
-#                 continue
+            if len(parts) < 2:
+                continue
 
-#             image_filename = parts[0]                 # 13456.jpg
-#             group_label = parts[1]                    # r_spike
+            image_filename = parts[0]                 # 13456.jpg
+            group_label = parts[1]                    # r_spike
 
-#             clip_id = os.path.splitext(image_filename)[0]   # 13456
+            clip_id = os.path.splitext(image_filename)[0]   # 13456
 
-#             image_path = os.path.join(
-#                 current_video_folder_path,
-#                 clip_id,
-#                 image_filename
-#             )
+            image_path = os.path.join(
+                current_video_folder_path,
+                clip_id,
+                image_filename
+            )
 
-#             tracking_path = os.path.join(
-#                 "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_tracking_annotation/volleyball_tracking_annotation",
-#                 str(video_id),
-#                 clip_id,
-#                 f"{clip_id}.txt"
-#             )
+            tracking_path = os.path.join(
+                "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_tracking_annotation/volleyball_tracking_annotation",
+                str(video_id),
+                clip_id,
+                f"{clip_id}.txt"
+            )
 
-#             data.append({
-#                 "video_id": video_id,
-#                 "clip_id": clip_id,
-#                 "image_path": image_path,
-#                 "tracking_path": tracking_path,
-#                 "group_label": group_label
-#             })
+            data.append({
+                "video_id": video_id,
+                "clip_id": clip_id,
+                "image_path": image_path,
+                "tracking_path": tracking_path,
+                "group_label": group_label
+            })
             
 
 
             
-# train_videos = [1, 3, 6, 7, 10, 13, 15, 16, 18, 22, 23, 31, 32, 36, 38, 39, 40, 41, 42, 48, 50, 52, 53, 54]
-# val_videos = [0, 2, 8, 12, 17, 19, 24, 26, 27, 28, 30, 33, 46, 49, 51]
-# test_videos = [4, 5, 9, 11, 14, 20, 21, 25, 29, 34, 35, 37, 43, 44, 45, 47]
+train_videos = [1, 3, 6, 7, 10, 13, 15, 16, 18, 22, 23, 31, 32, 36, 38, 39, 40, 41, 42, 48, 50, 52, 53, 54]
+val_videos = [0, 2, 8, 12, 17, 19, 24, 26, 27, 28, 30, 33, 46, 49, 51]
+test_videos = [4, 5, 9, 11, 14, 20, 21, 25, 29, 34, 35, 37, 43, 44, 45, 47]
 
-# train_data = []
-# val_data = []
-# test_data = []
+train_data = []
+val_data = []
+test_data = []
 
-# for sample in data:
-#     if sample["video_id"] in train_videos:
-#         train_data.append(sample)
+for sample in data:
+    if sample["video_id"] in train_videos:
+        train_data.append(sample)
 
-#     elif sample["video_id"] in val_videos:
-#         val_data.append(sample)
+    elif sample["video_id"] in val_videos:
+        val_data.append(sample)
 
-#     else:
-#         test_data.append(sample)
-# label_map = {
-#     "l_pass": 0,
-#     "r_pass": 1,
-#     "l_spike": 2,
-#     "r_spike": 3,
-#     "l_set": 4,
-#     "r_set": 5,
-#     "l_winpoint": 6,
-#     "r_winpoint": 7,
+    else:
+        test_data.append(sample)
+label_map = {
+    "l_pass": 0,
+    "r_pass": 1,
+    "l_spike": 2,
+    "r_spike": 3,
+    "l_set": 4,
+    "r_set": 5,
+    "l_winpoint": 6,
+    "r_winpoint": 7,
 
-#     "l-pass": 0,
-#     "r-pass": 1,
-#     "l-spike": 2,
-#     "r-spike": 3,
-#     "l-set": 4,
-#     "r-set": 5,
-#     "l-winpoint": 6,
-#     "r-winpoint": 7
-# }
-# class_names = [
-#     "l_pass",
-#     "r_pass",
-#     "l_spike",
-#     "r_spike",
-#     "l_set",
-#     "r_set",
-#     "l_winpoint",
-#     "r_winpoint"
-# ]
+    "l-pass": 0,
+    "r-pass": 1,
+    "l-spike": 2,
+    "r-spike": 3,
+    "l-set": 4,
+    "r-set": 5,
+    "l-winpoint": 6,
+    "r-winpoint": 7
+}
+class_names = [
+    "l_pass",
+    "r_pass",
+    "l_spike",
+    "r_spike",
+    "l_set",
+    "r_set",
+    "l_winpoint",
+    "r_winpoint"
+]
 transform = prepare_model(image_level=False)
 
 # class VolleyballDataset(Dataset):
@@ -247,7 +247,7 @@ EPOCHS = 40
 
 
 #(test 2 old-dataset-vers)
-train_dataset = VolleyballDataset(
+train_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
     pkl_path=pkl_path,
     split_ids=train_ids,
@@ -257,7 +257,7 @@ train_dataset = VolleyballDataset(
     transform=transform
 )
 
-val_dataset = VolleyballDataset(
+val_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
     pkl_path=pkl_path,
     split_ids=val_ids,
