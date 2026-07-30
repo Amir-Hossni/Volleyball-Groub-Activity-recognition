@@ -29,7 +29,7 @@ from Data.boxinfo import BoxInfo
 from Data.volleyball_annot_loader import load_tracking_annot
 from Data.preprocessing import prepare_model
 from Data.new_dataset import VolleyballDatasetv2
-from Data.dataset import VolleyballDataset
+# from Data.dataset import VolleyballDataset
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -168,105 +168,79 @@ class_names = [
 ]
 transform = prepare_model(image_level=False)
 
-# class VolleyballDataset(Dataset):
-#     def __init__(self, data, transform=None):
-#         self.data = data
-#         self.transform = transform
+class VolleyballDataset(Dataset):
+    def __init__(self, data, transform=None):
+        self.data = data
+        self.transform = transform
 
-#     def __len__(self):
-#         return len(self.data)
+    def __len__(self):
+        return len(self.data)
         
-#     def __getitem__(self, idx):
+    def __getitem__(self, idx):
     
-#         sample = self.data[idx]
+        sample = self.data[idx]
     
-#         image = Image.open(sample["image_path"]).convert("RGB")
+        image = Image.open(sample["image_path"]).convert("RGB")
     
-#         frame_boxes = load_tracking_annot(sample["tracking_path"])
+        frame_boxes = load_tracking_annot(sample["tracking_path"])
     
-#         frame_id = list(frame_boxes.keys())[0]
+        frame_id = list(frame_boxes.keys())[0]
     
-#         player_crops = []
+        player_crops = []
     
-#         for box_info in frame_boxes[frame_id][:12]:
-#             x1, y1, x2, y2 = box_info.box
+        for box_info in frame_boxes[frame_id][:12]:
+            x1, y1, x2, y2 = box_info.box
     
-#             crop = image.crop((x1, y1, x2, y2))
+            crop = image.crop((x1, y1, x2, y2))
     
-#             if self.transform:
-#                 crop = self.transform(crop)
+            if self.transform:
+                crop = self.transform(crop)
     
-#             player_crops.append(crop)
+            player_crops.append(crop)
     
-#         while len(player_crops) < 12:
-#             player_crops.append(torch.zeros(3, 224, 224))
+        while len(player_crops) < 12:
+            player_crops.append(torch.zeros(3, 224, 224))
     
-#         player_crops = torch.stack(player_crops)
+        player_crops = torch.stack(player_crops)
     
-#         label = torch.tensor(
-#             label_map[sample["group_label"]],
-#             dtype=torch.long
-#         )
+        label = torch.tensor(
+            label_map[sample["group_label"]],
+            dtype=torch.long
+        )
     
-#         return player_crops, label
+        return player_crops, label
     
-# dataset = VolleyballDataset(train_data, transform)
+
 LR = 1e-3
 BATCH_SIZE = 16
 EPOCHS = 40
 
-# train_dataset = VolleyballDataset(train_data, transform)
-# val_dataset = VolleyballDataset(val_data, transform)
-# test_dataset = VolleyballDataset(test_data, transform)
-
-####(test 1)
-# train_dataset = VolleyballDatasetDirect(
-#     data=train_data,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     transform=transform
-# )
-# val_dataset = VolleyballDatasetDirect(
-#     data=val_data,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     transform=transform
-# )
-
-
-
-# test_loader = DataLoader(
-#     test_dataset,
-#     batch_size=BATCH_SIZE,
-#     shuffle=False,
-#     pin_memory=True,
-#     num_workers=4,
-#     persistent_workers=True,
-#     prefetch_factor=2
-# )
+train_dataset = VolleyballDataset(train_data, transform)
+val_dataset = VolleyballDataset(val_data, transform)
+test_dataset = VolleyballDataset(test_data, transform)
 
 
 #(test 2 old-dataset-vers)
-train_dataset = VolleyballDatasetv2(
-    videos_path=videos_path,
-    annot_root=annot_root,
-    split_ids=train_ids,
-    scene_to_idx=scene_to_idx,
-    player_to_idx=player_to_idx,
-    mode="person_grouped",
-    transform=transform
-)
+# train_dataset = VolleyballDatasetv2(
+#     videos_path=videos_path,
+#     annot_root=annot_root,
+#     split_ids=train_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="person_grouped",
+#     transform=transform
+# )
 
 
-val_dataset = VolleyballDatasetv2(
-    videos_path=videos_path,
-    annot_root=annot_root,
-    split_ids=val_ids,
-    scene_to_idx=scene_to_idx,
-    player_to_idx=player_to_idx,
-    mode="person_grouped",
-    transform=transform
-)
+# val_dataset = VolleyballDatasetv2(
+#     videos_path=videos_path,
+#     annot_root=annot_root,
+#     split_ids=val_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="person_grouped",
+#     transform=transform
+# )
 
 
 
@@ -291,6 +265,17 @@ val_loader = DataLoader(
     persistent_workers=True,
     prefetch_factor=2
 )
+
+test_loader = DataLoader(
+    test_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    pin_memory=True,
+    num_workers=4,
+    persistent_workers=True,
+    prefetch_factor=2
+)
+
 
 class B3Model(nn.Module):
     def __init__(self):
@@ -343,20 +328,20 @@ for epoch in range(EPOCHS):
 
     model.train()
     train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [train]", leave=False)
-    # for inputs, labels in train_bar:
-    #     inputs = inputs.to(device, non_blocking=True)
-    #     labels = labels.to(device, non_blocking=True)
-    for batch in train_bar:
+    for inputs, labels in train_bar:
+        inputs = inputs.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+    # for batch in train_bar:
 
-        inputs = batch["images"].to(
-            device,
-            non_blocking=True
-        )
+    #     inputs = batch["images"].to(
+    #         device,
+    #         non_blocking=True
+    #     )
 
-        labels = batch["scene_label"].to(
-            device,
-            non_blocking=True
-        )
+    #     labels = batch["scene_label"].to(
+    #         device,
+    #         non_blocking=True
+    #     )
         optimizer.zero_grad()
         outputs = model(inputs)
         train_loss = criterion(outputs, labels)
@@ -378,20 +363,20 @@ for epoch in range(EPOCHS):
     model.eval()
     val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [val]", leave=False)
     with torch.no_grad():
-        # for inputs, labels in val_bar:
-        #     inputs = inputs.to(device, non_blocking=True)
-        #     labels = labels.to(device, non_blocking=True)
-        for batch in val_bar:
+        for inputs, labels in val_bar:
+            inputs = inputs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+        # for batch in val_bar:
 
-            inputs = batch["images"].to(
-            device,
-            non_blocking=True
-            )
+        #     inputs = batch["images"].to(
+        #     device,
+        #     non_blocking=True
+        #     )
 
-            labels = batch["scene_label"].to(
-                device,
-                non_blocking=True
-            )
+        #     labels = batch["scene_label"].to(
+        #         device,
+        #         non_blocking=True
+        #     )
             outputs = model(inputs)
 
             predictions = torch.argmax(outputs, dim=1)
