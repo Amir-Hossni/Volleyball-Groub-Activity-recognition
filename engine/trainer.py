@@ -68,7 +68,7 @@ class Trainer:
             enabled=self.use_amp,
         )
 
-    def train_one_epoch(self, loader):
+    def train_one_epoch(self, loader, epoch):
         self.model.train()
 
         running_loss = 0.0
@@ -81,7 +81,7 @@ class Trainer:
 
         epoch_start = time.time()
 
-        train_bar = tqdm(loader,desc="Train",leave=False)
+        train_bar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs} [train]", leave=True,)
         for batch in train_bar:
             inputs, targets = self.adapter(batch)
 
@@ -151,16 +151,17 @@ class Trainer:
             print(f"Epoch [{epoch + 1}/{self.epochs}]")
             print("=" * 50)
 
-            train_loss, train_metrics = self.train_one_epoch(train_loader)
+            train_loss, train_metrics = self.train_one_epoch(train_loader, epoch,)
 
-            val_bar = tqdm(val_loader, desc="Val", leave=False)
+            val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{self.epochs} [val]", leave=True,)
+
             val_loss, val_metrics = evaluate(
-                self.model,
-                val_bar,
-                self.criterion,
-                self.device,
-                self.adapter,
-                self.num_classes,
+            self.model,
+            val_bar,
+            self.criterion,
+            self.device,
+            self.adapter,
+            self.num_classes,
             )
 
             log_metrics(
