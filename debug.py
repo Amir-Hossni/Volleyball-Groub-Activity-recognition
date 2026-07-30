@@ -249,6 +249,7 @@ EPOCHS = 40
 #(test 2 old-dataset-vers)
 train_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
+    annot_root=annot_root,
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
@@ -256,14 +257,17 @@ train_dataset = VolleyballDatasetv2(
     transform=transform
 )
 
+
 val_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
+    annot_root=annot_root,
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
     mode="person_grouped",
     transform=transform
 )
+
 
 
 
