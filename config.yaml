@@ -33,14 +33,23 @@ Data:
 
     # Group activity classification
     SCENE_TO_IDX:
-      l-pass: 0
-      r-pass: 1
-      l-spike: 2
-      r_spike: 3
-      l_set: 4
-      r_set: 5
-      l_winpoint: 6
-      r_winpoint: 7
+      "l_pass": 0
+      "r_pass": 1
+      "l_spike": 2
+      "r_spike": 3
+      "l_set": 4
+      "r_set": 5
+      "l_winpoint": 6
+      "r_winpoint": 7
+
+      "l-pass": 0
+      "r-pass": 1
+      "l-spike": 2
+      "r-spike": 3
+      "l-set": 4
+      "r-set": 5
+      "l-winpoint": 6
+      "r-winpoint": 7
 
 
   # Dataset split from paper

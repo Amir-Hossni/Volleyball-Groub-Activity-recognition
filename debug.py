@@ -3,6 +3,9 @@ import cv2
 import numpy as np
 # import matplotlib.pyplot as plt
 # import seaborn as sns
+import yaml
+from pathlib import Path
+
 
 import torch
 from torch import nn
@@ -23,6 +26,36 @@ from sklearn.metrics import (
     f1_score,
 )
 from Data.boxinfo import BoxInfo
+from Data.volleyball_annot_loader import load_tracking_annot
+from Data.preprocessing import prepare_model
+from Data.new_dataset import VolleyballDatasetDirect
+
+
+BASE_DIR = Path(__file__).resolve().parent
+
+def load_config(config_path="config.yaml"):
+    with open(config_path, "r") as file:
+        return yaml.safe_load(file)
+    
+config = load_config("config.yaml")
+
+
+# Load Config
+# ==========================
+
+data_cfg = config["Data"]
+data_root = Path(data_cfg["DATA_ROOT"])
+videos_path = data_root / data_cfg["PATHS"]["VIDEOS_PATH"]
+annot_root = data_root / data_cfg["PATHS"]["TRACKING_ANNOTATION_PATH"]
+pkl_path = Path(data_cfg["PATHS"]["PKL_PATH"])
+scene_to_idx = data_cfg["CATEGORIES"]["SCENE_TO_IDX"]
+player_to_idx = data_cfg["CATEGORIES"]["PLAYER_TO_IDX"]
+train_ids = data_cfg["SPLIT"]["TRAIN_IDS"]
+val_ids = data_cfg["SPLIT"]["VAL_IDS"]
+
+
+
+
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -30,82 +63,61 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
         
 dataset_root = "/kaggle/input/datasets/ahmedmohamed365/volleyball"
 
-def load_tracking_annot(path):
-    with open(path, 'r') as file:
-        player_boxes = {idx:[] for idx in range(12)}
-        frame_boxes_dct = {}
 
-        for idx, line in enumerate(file):
-            box_info = BoxInfo(line)
-            if box_info.player_ID > 11:
-                continue
-            player_boxes[box_info.player_ID].append(box_info)
-
-        # let's create view from frame to boxes
-        for player_ID, boxes_info in player_boxes.items():
-            # let's keep the middle 9 frames only (enough for this task empirically)
-            boxes_info = boxes_info[5:]
-            boxes_info = boxes_info[:-6]
-
-            for box_info in boxes_info:
-                if box_info.frame_ID not in frame_boxes_dct:
-                    frame_boxes_dct[box_info.frame_ID] = []
-
-                frame_boxes_dct[box_info.frame_ID].append(box_info)
-
-        return frame_boxes_dct
     
     
 root = "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_/videos"
 
 data = []
 
-for video_folder_name in os.listdir(root):
-    current_video_folder_path = os.path.join(root, video_folder_name)
+# for video_folder_name in os.listdir(root):
+#     current_video_folder_path = os.path.join(root, video_folder_name)
 
-    if not os.path.isdir(current_video_folder_path):
-        continue
+#     if not os.path.isdir(current_video_folder_path):
+#         continue
 
-    annotations_path = os.path.join(current_video_folder_path, "annotations.txt")
+#     annotations_path = os.path.join(current_video_folder_path, "annotations.txt")
 
-    if not os.path.isfile(annotations_path):
-        continue
+#     if not os.path.isfile(annotations_path):
+#         continue
 
-    video_id = int(video_folder_name)
+#     video_id = int(video_folder_name)
 
-    with open(annotations_path, "r") as f:
-        for line in f:
-            parts = line.strip().split()
+#     with open(annotations_path, "r") as f:
+#         for line in f:
+#             parts = line.strip().split()
 
-            if len(parts) < 2:
-                continue
+#             if len(parts) < 2:
+#                 continue
 
-            image_filename = parts[0]                 # 13456.jpg
-            group_label = parts[1]                    # r_spike
+#             image_filename = parts[0]                 # 13456.jpg
+#             group_label = parts[1]                    # r_spike
 
-            clip_id = os.path.splitext(image_filename)[0]   # 13456
+#             clip_id = os.path.splitext(image_filename)[0]   # 13456
 
-            image_path = os.path.join(
-                current_video_folder_path,
-                clip_id,
-                image_filename
-            )
+#             image_path = os.path.join(
+#                 current_video_folder_path,
+#                 clip_id,
+#                 image_filename
+#             )
 
-            tracking_path = os.path.join(
-                "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_tracking_annotation/volleyball_tracking_annotation",
-                str(video_id),
-                clip_id,
-                f"{clip_id}.txt"
-            )
+#             tracking_path = os.path.join(
+#                 "/kaggle/input/datasets/ahmedmohamed365/volleyball/volleyball_tracking_annotation/volleyball_tracking_annotation",
+#                 str(video_id),
+#                 clip_id,
+#                 f"{clip_id}.txt"
+#             )
 
-            data.append({
-                "video_id": video_id,
-                "clip_id": clip_id,
-                "image_path": image_path,
-                "tracking_path": tracking_path,
-                "group_label": group_label
-            })
+#             data.append({
+#                 "video_id": video_id,
+#                 "clip_id": clip_id,
+#                 "image_path": image_path,
+#                 "tracking_path": tracking_path,
+#                 "group_label": group_label
+#             })
             
+
+
             
 train_videos = [1, 3, 6, 7, 10, 13, 15, 16, 18, 22, 23, 31, 32, 36, 38, 39, 40, 41, 42, 48, 50, 52, 53, 54]
 val_videos = [0, 2, 8, 12, 17, 19, 24, 26, 27, 28, 30, 33, 46, 49, 51]
@@ -153,14 +165,8 @@ class_names = [
     "l_winpoint",
     "r_winpoint"
 ]
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-])
+transform = prepare_model(image_level=False)
+
 class VolleyballDataset(Dataset):
     def __init__(self, data, transform=None):
         self.data = data
@@ -207,9 +213,26 @@ dataset = VolleyballDataset(train_data, transform)
 LR = 1e-3
 BATCH_SIZE = 16
 EPOCHS = 40
-train_dataset = VolleyballDataset(train_data, transform)
-val_dataset = VolleyballDataset(val_data, transform)
-test_dataset = VolleyballDataset(test_data, transform)
+
+# train_dataset = VolleyballDataset(train_data, transform)
+# val_dataset = VolleyballDataset(val_data, transform)
+# test_dataset = VolleyballDataset(test_data, transform)
+
+
+train_dataset = VolleyballDatasetDirect(
+    data=train_data,
+    scene_to_idx=scene_to_idx,
+    player_to_idx=player_to_idx,
+    transform=transform
+)
+
+
+val_dataset = VolleyballDatasetDirect(
+    data=val_data,
+    scene_to_idx=scene_to_idx,
+    player_to_idx=player_to_idx,
+    transform=transform
+)
 
 
 train_loader = DataLoader(
@@ -232,15 +255,15 @@ val_loader = DataLoader(
     prefetch_factor=2
 )
 
-test_loader = DataLoader(
-    test_dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=False,
-    pin_memory=True,
-    num_workers=4,
-    persistent_workers=True,
-    prefetch_factor=2
-)
+# test_loader = DataLoader(
+#     test_dataset,
+#     batch_size=BATCH_SIZE,
+#     shuffle=False,
+#     pin_memory=True,
+#     num_workers=4,
+#     persistent_workers=True,
+#     prefetch_factor=2
+# )
 class B3Model(nn.Module):
     def __init__(self):
         super().__init__()
@@ -292,10 +315,20 @@ for epoch in range(EPOCHS):
 
     model.train()
     train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [train]", leave=False)
-    for inputs, labels in train_bar:
-        inputs = inputs.to(device, non_blocking=True)
-        labels = labels.to(device, non_blocking=True)
+    # for inputs, labels in train_bar:
+    #     inputs = inputs.to(device, non_blocking=True)
+    #     labels = labels.to(device, non_blocking=True)
+    for batch in train_bar:
 
+        inputs = batch["images"].to(
+            device,
+            non_blocking=True
+        )
+
+        labels = batch["scene_label"].to(
+            device,
+            non_blocking=True
+        )
         optimizer.zero_grad()
         outputs = model(inputs)
         train_loss = criterion(outputs, labels)
@@ -317,10 +350,20 @@ for epoch in range(EPOCHS):
     model.eval()
     val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [val]", leave=False)
     with torch.no_grad():
-        for inputs, labels in val_bar:
-            inputs = inputs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
+        # for inputs, labels in val_bar:
+        #     inputs = inputs.to(device, non_blocking=True)
+        #     labels = labels.to(device, non_blocking=True)
+        for batch in val_bar:
 
+            inputs = batch["images"].to(
+            device,
+            non_blocking=True
+            )
+
+            labels = batch["scene_label"].to(
+                device,
+                non_blocking=True
+            )
             outputs = model(inputs)
 
             predictions = torch.argmax(outputs, dim=1)
