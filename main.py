@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import torch
 
 from Data.dataset import VolleyballDataset
+from Data.new_dataset import VolleyballDatasetv2
 from Data.preprocessing import prepare_model
 
 
@@ -50,8 +51,29 @@ val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 transform = prepare_model(image_level=False)
 
 
-# Dataset
-train_dataset = VolleyballDataset(
+# Dataset_old
+# train_dataset = VolleyballDataset(
+#     videos_path=videos_path,
+#     pkl_path=pkl_path,
+#     split_ids=train_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="person_grouped",
+#     transform=transform
+# )
+
+# val_dataset = VolleyballDataset(
+#     videos_path=videos_path,
+#     pkl_path=pkl_path,
+#     split_ids=val_ids,
+#     scene_to_idx=scene_to_idx,
+#     player_to_idx=player_to_idx,
+#     mode="person_grouped",
+#     transform=transform
+# )
+
+##datset_new_ver
+train_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
     pkl_path=pkl_path,
     split_ids=train_ids,
@@ -61,7 +83,7 @@ train_dataset = VolleyballDataset(
     transform=transform
 )
 
-val_dataset = VolleyballDataset(
+val_dataset = VolleyballDatasetv2(
     videos_path=videos_path,
     pkl_path=pkl_path,
     split_ids=val_ids,
@@ -70,7 +92,6 @@ val_dataset = VolleyballDataset(
     mode="person_grouped",
     transform=transform
 )
-
 
 # # DataLoader
 train_loader = DataLoader(
