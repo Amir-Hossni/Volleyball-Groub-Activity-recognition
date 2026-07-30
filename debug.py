@@ -328,20 +328,20 @@ for epoch in range(EPOCHS):
 
     model.train()
     train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [train]", leave=False)
-    for inputs, labels in train_bar:
-        inputs = inputs.to(device, non_blocking=True)
-        labels = labels.to(device, non_blocking=True)
-    # for batch in train_bar:
+    # for inputs, labels in train_bar:
+    #     inputs = inputs.to(device, non_blocking=True)
+    #     labels = labels.to(device, non_blocking=True)
+    for batch in train_bar:
 
-    #     inputs = batch["images"].to(
-    #         device,
-    #         non_blocking=True
-    #     )
+        inputs = batch["images"].to(
+            device,
+            non_blocking=True
+        )
 
-    #     labels = batch["scene_label"].to(
-    #         device,
-    #         non_blocking=True
-    #     )
+        labels = batch["scene_label"].to(
+            device,
+            non_blocking=True
+        )
         optimizer.zero_grad()
         outputs = model(inputs)
         train_loss = criterion(outputs, labels)
@@ -363,20 +363,20 @@ for epoch in range(EPOCHS):
     model.eval()
     val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [val]", leave=False)
     with torch.no_grad():
-        for inputs, labels in val_bar:
-            inputs = inputs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
-        # for batch in val_bar:
+        # for inputs, labels in val_bar:
+        #     inputs = inputs.to(device, non_blocking=True)
+        #     labels = labels.to(device, non_blocking=True)
+        for batch in val_bar:
 
-        #     inputs = batch["images"].to(
-        #     device,
-        #     non_blocking=True
-        #     )
+            inputs = batch["images"].to(
+            device,
+            non_blocking=True
+            )
 
-        #     labels = batch["scene_label"].to(
-        #         device,
-        #         non_blocking=True
-        #     )
+            labels = batch["scene_label"].to(
+                device,
+                non_blocking=True
+            )
             outputs = model(inputs)
 
             predictions = torch.argmax(outputs, dim=1)
