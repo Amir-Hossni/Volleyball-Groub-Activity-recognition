@@ -112,16 +112,17 @@ device = torch.device(
 # )
 
 # B3
-# model = PersonClassifierB3(
-#     num_classes=len(player_to_idx),
-#     pretrained=True
-# )
-
+#stage1
 model = PersonClassifierB3(
     num_classes=len(player_to_idx),
-    pretrained=True,
-    freeze_backbone=False
+    pretrained=True
 )
+
+# model = PersonClassifierB3(
+#     num_classes=len(player_to_idx),
+#     pretrained=True,
+#     freeze_backbone=False
+# )
 # person_model.load_state_dict(torch.load("person.pth"))
 # backbone = person_model.backbone
 # group_model = GroupClassifierB3(backbone)
