@@ -20,58 +20,58 @@ def identity_adapter(batch, input_key="images", target_key="scene_label"):
 
 
 
-def flatten_person_batch(
-    batch,
-    input_key="images",
-    target_key="player_labels",
-    ignore_index=-1
-):
-    """
-    Convert:
-    images:
-        (B,P,C,H,W)
+# def flatten_person_batch(
+#     batch,
+#     input_key="images",
+#     target_key="player_labels",
+#     ignore_index=-1
+# ):
+#     """
+#     Convert:
+#     images:
+#         (B,P,C,H,W)
 
-    labels:
-        (B,P)
+#     labels:
+#         (B,P)
 
-    into:
+#     into:
 
-    images:
-        (N,C,H,W)
+#     images:
+#         (N,C,H,W)
 
-    labels:
-        (N,)
+#     labels:
+#         (N,)
 
-    removing padded players.
-    """
-
-
-    images = batch[input_key]
-
-    labels = batch[target_key]
+#     removing padded players.
+#     """
 
 
-    B, P, C, H, W = images.shape
+#     images = batch[input_key]
+
+#     labels = batch[target_key]
 
 
-    images = images.reshape(
-        B * P,
-        C,
-        H,
-        W
-    )
+#     B, P, C, H, W = images.shape
 
 
-    labels = labels.reshape(-1)
+#     images = images.reshape(
+#         B * P,
+#         C,
+#         H,
+#         W
+#     )
 
 
-    if ignore_index is not None:
-
-        mask = labels != ignore_index
-
-        images = images[mask]
-
-        labels = labels[mask]
+#     labels = labels.reshape(-1)
 
 
-    return images, labels
+#     if ignore_index is not None:
+
+#         mask = labels != ignore_index
+
+#         images = images[mask]
+
+#         labels = labels[mask]
+
+
+#     return images, labels

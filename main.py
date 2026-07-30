@@ -1,7 +1,5 @@
 
-
 from pathlib import Path
-
 
 import yaml
 from torch.utils.data import DataLoader
@@ -10,9 +8,9 @@ import torch
 from Data.dataset import VolleyballDataset
 from Data.preprocessing import prepare_model
 
+
 from engine.trainer import Trainer
-from engine.new_trainer import New_Trainer
-from engine.adapters import flatten_person_batch
+from engine.adapters import identity_adapter
 
 # from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
@@ -147,65 +145,21 @@ optimizer = torch.optim.AdamW(
 )
 
 
-# trainer = Trainer(
-
-#     model=model,
-
-#     optimizer=optimizer,
-
-#     criterion=criterion,
-
-#     device=device,
-
-#     adapter=lambda batch:
-#         flatten_person_batch(
-#             batch,
-#             input_key="images",
-#             target_key="player_labels",
-#             ignore_index=-1
-#         ),
-
-#     num_classes=len(player_to_idx),
-
-#     save_path=
-#     "/kaggle/working/best_B3_person_model.pth",
-
-#     log_name="B3_person",
-
-#     epochs=50
-
-# )
 
 
 
-trainer = New_Trainer(
-
+#Trainer
+trainer = Trainer(
     model=model,
-
     optimizer=optimizer,
-
     criterion=criterion,
-
     device=device,
-
-    adapter=lambda batch:
-        flatten_person_batch(
-            batch,
-            input_key="images",
-            target_key="player_labels",
-            ignore_index=-1
-        ),
-
-    num_classes=len(player_to_idx),
-
-    save_path="/kaggle/working/best_B3_person_model.pth",
-
-    log_name="B3_person",
-
+    adapter=identity_adapter,
+    num_classes=8,
+    save_path="/kaggle/working/best_B3_group.pth",
+    log_name="B3_group_stage1",
     epochs=50,
-
     use_amp=True,
-
     grad_clip=None,
 )
 

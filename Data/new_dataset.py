@@ -212,8 +212,8 @@ class VolleyballDatasetv2(Dataset):
         frame_id = next(iter(frame_boxes))
         boxes = frame_boxes[frame_id]
 
-            # Pre-sort boxes by player_ID once during build
-            # instead of sorting on every __getitem__ call
+        # Pre-sort boxes by player_ID once during build
+        # instead of sorting on every __getitem__ call
         sorted_boxes = sorted(
             boxes,
             key=lambda x: x.player_ID

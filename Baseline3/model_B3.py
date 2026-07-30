@@ -5,77 +5,104 @@ from torchvision import models
 from torchvision.models import ResNet50_Weights
 
 
-def get_device(prefer_cuda=True):
-    """Single source of truth for the device. Use this everywhere -
-    model, trainer, evaluator - so CPU/GPU never disagree."""
-    if prefer_cuda and torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
+# def get_device(prefer_cuda=True):
+#     """Single source of truth for the device. Use this everywhere -
+#     model, trainer, evaluator - so CPU/GPU never disagree."""
+#     if prefer_cuda and torch.cuda.is_available():
+#         return torch.device("cuda")
+#     return torch.device("cpu")
     
-class PersonClassifierB3(nn.Module):
-    """Baseline 3: person-level action classifier.
+# class PersonClassifierB3(nn.Module):
+#     """Baseline 3: person-level action classifier.
 
-    Input : cropped person bounding boxes  (B, 3, H, W)
-    Output: logits over the 9 individual action classes, or the pooled
-            2048-d backbone features when return_features=True.
-    """
+#     Input : cropped person bounding boxes  (B, 3, H, W)
+#     Output: logits over the 9 individual action classes, or the pooled
+#             2048-d backbone features when return_features=True.
+#     """
 
-    def __init__(
-        self,
-        num_classes=9,
-        pretrained=True,
-        freeze_backbone=False,
-    ):
+#     def __init__(
+#         self,
+#         num_classes=9,
+#         pretrained=True,
+#         freeze_backbone=False,
+#     ):
+#         super().__init__()
+
+#         # Pinned checkpoint - "DEFAULT" silently changes across torchvision
+#         # releases, which breaks reproducibility between baselines.
+#         weights = ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
+
+#         self.backbone = models.resnet50(weights=weights)
+
+#         self.feature_dim = self.backbone.fc.in_features  # 2048
+#         self.backbone.fc = nn.Identity()
+
+#         self.classifier = nn.Linear(self.feature_dim, num_classes)
+
+#         if freeze_backbone:
+#             self.freeze_backbone()
+
+#     def freeze_backbone(self):
+#         for param in self.backbone.parameters():
+#             param.requires_grad = False
+
+#     def unfreeze_backbone(self):
+#         for param in self.backbone.parameters():
+#             param.requires_grad = True
+
+#     def forward(self, x, return_features=False):
+#         features = self.backbone(x)
+
+#         if return_features:
+#             return features
+
+#         return self.classifier(features)
+
+#     @torch.no_grad()
+#     def extract_features(self, x):
+#         """Frozen feature extraction for B4+ (temporal / hierarchical stages)."""
+#         self.eval()
+#         return self.backbone(x)
+
+
+# def build_b3(num_classes=9, pretrained=True, freeze_backbone=False, device=None):
+#     """Build the model already placed on the right device."""
+#     device = device if device is not None else get_device()
+
+#     model = PersonClassifierB3(
+#         num_classes=num_classes,
+#         pretrained=pretrained,
+#         freeze_backbone=freeze_backbone,
+#     )
+
+#     return model.to(device)
+
+
+class GroupClassifierB3(nn.Module):
+
+    def __init__(self, num_classes=8, pretrained=True):
         super().__init__()
 
-        # Pinned checkpoint - "DEFAULT" silently changes across torchvision
-        # releases, which breaks reproducibility between baselines.
-        weights = ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
+        resnet = models.resnet50(weights="DEFAULT" if pretrained else None)
 
-        self.backbone = models.resnet50(weights=weights)
+        self.backbone = nn.Sequential(*list(resnet.children())[:-1])
 
-        self.feature_dim = self.backbone.fc.in_features  # 2048
-        self.backbone.fc = nn.Identity()
+        self.classifier = nn.Linear(2048,num_classes)
 
-        self.classifier = nn.Linear(self.feature_dim, num_classes)
 
-        if freeze_backbone:
-            self.freeze_backbone()
+    def forward(self, x):
+        # x = (B,12,3,224,224)
+        B,P,C,H,W = x.shape
 
-    def freeze_backbone(self):
-        for param in self.backbone.parameters():
-            param.requires_grad = False
-
-    def unfreeze_backbone(self):
-        for param in self.backbone.parameters():
-            param.requires_grad = True
-
-    def forward(self, x, return_features=False):
+        x = x.view(B*P,C,H,W)
         features = self.backbone(x)
-
-        if return_features:
-            return features
+        features = torch.flatten(features, start_dim=1)
+        # (B,12,2048)
+        features = features.view(B,P,2048)
+        # max pooling over players
+        features,_ = torch.max(features, dim=1)
 
         return self.classifier(features)
-
-    @torch.no_grad()
-    def extract_features(self, x):
-        """Frozen feature extraction for B4+ (temporal / hierarchical stages)."""
-        self.eval()
-        return self.backbone(x)
-
-
-def build_b3(num_classes=9, pretrained=True, freeze_backbone=False, device=None):
-    """Build the model already placed on the right device."""
-    device = device if device is not None else get_device()
-
-    model = PersonClassifierB3(
-        num_classes=num_classes,
-        pretrained=pretrained,
-        freeze_backbone=freeze_backbone,
-    )
-
-    return model.to(device)
     
 class GroupClassifierB3(nn.Module):
 
