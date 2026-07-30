@@ -201,50 +201,46 @@ class VolleyballDatasetv2(Dataset):
 
 
     def _add_person_grouped_samples(
-            self,
-            video_id,
-            clip_id,
-            frame_boxes,
-            scene_label):
-    
-            frame_id = next(iter(frame_boxes))
-            boxes = frame_boxes[frame_id]
-    
+        self,
+        video_id,
+        clip_id,
+        clip_path,
+        frame_boxes,
+        scene_label
+    ):
+
+        frame_id = next(iter(frame_boxes))
+        boxes = frame_boxes[frame_id]
+
             # Pre-sort boxes by player_ID once during build
             # instead of sorting on every __getitem__ call
-            sorted_boxes = sorted(
-                boxes,
-                key=lambda x: x["player_ID"]
-            )
-    
-            # Pre-resolve player label strings to integer indices
-            # to avoid dict lookups inside the hot __getitem__ path.
-            for box in sorted_boxes:
-                box["label_idx"] = self.player_to_idx[box["category"]]
-    
-            self.samples.append(
-                {
-                    "video_id": video_id,
-    
-                    "clip_id": clip_id,
-    
-                    "frame_id": frame_id,
-    
-                    "frame_path":
-                        self.videos_path
-                        /
-                        video_id
-                        /
-                        clip_id
-                        /
-                        f"{frame_id}.jpg",
-    
-                    "boxes": sorted_boxes,
-    
-                    "scene_label":
-                        scene_label
-                }
-            )
+        sorted_boxes = sorted(
+            boxes,
+            key=lambda x: x.player_ID
+        )
+
+        # Pre-resolve player label strings to integer indices
+        # to avoid dict lookups inside the hot __getitem__ path.
+        for box in sorted_boxes:
+            box.label_idx = self.player_to_idx[
+                box.category
+            ]
+
+        self.samples.append(
+            {
+                "video_id": video_id,
+                "clip_id": clip_id,
+                "frame_id": frame_id,
+
+                "frame_path":
+                    clip_path / f"{frame_id}.jpg",
+
+                "boxes": sorted_boxes,
+
+                "scene_label":
+                    scene_label
+            }
+        )
 
 
 
