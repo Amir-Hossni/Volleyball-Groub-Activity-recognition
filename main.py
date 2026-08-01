@@ -96,7 +96,7 @@ val_dataset = VolleyballDatasetv2(
 # # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
-    batch_size=32,
+    batch_size=16,
     shuffle=True,
     num_workers=4,
     pin_memory=True,
@@ -106,7 +106,7 @@ train_loader = DataLoader(
 
 val_loader = DataLoader(
     dataset=val_dataset,
-    batch_size=32,
+    batch_size=16,
     shuffle=False,
     num_workers=4,
     pin_memory=True,
@@ -204,13 +204,7 @@ if __name__ == "__main__":
     # )
     
     
-    trainer.fit(
-
-        train_loader,
-
-        val_loader
-
-    )
+    trainer.fit(train_loader, val_loader)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     

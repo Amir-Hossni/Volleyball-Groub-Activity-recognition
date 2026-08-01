@@ -89,6 +89,8 @@ class PersonClassifierB3(nn.Module):
         self.model.fc = nn.Linear(in_features, num_classes)
 
     def forward(self, x):
+        B, P, C, H, W = x.shape
+        x = x.reshape(B * P, C, H, W)
         return self.model(x)
     
 class GroupClassifierB3(nn.Module):
