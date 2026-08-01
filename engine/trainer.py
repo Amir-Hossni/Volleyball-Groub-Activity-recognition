@@ -3,7 +3,8 @@ from pathlib import Path
 from tqdm.auto import tqdm
 import torch
 
-from utlis.metrics import calculate_metrics
+# from utlis.metrics import calculate_metrics
+from utlis.new_metrics import calculate_metrics
 from utlis.checkpoint import save_checkpoint
 from utlis.tensorboard import create_writer, log_metrics
 from utlis.early_stopping import EarlyStopping

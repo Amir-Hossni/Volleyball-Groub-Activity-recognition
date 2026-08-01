@@ -184,7 +184,7 @@ trainer = Trainer(
     save_path="/kaggle/working/best_B3_person_stage1.pth",
     log_name="B3_person_stage1",
     epochs=50,
-    use_amp=False,
+    use_amp=True,
     grad_clip=None,
 )
 
