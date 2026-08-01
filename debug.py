@@ -31,6 +31,8 @@ from Data.preprocessing import prepare_model
 from Data.new_dataset import VolleyballDatasetv2
 # from Data.dataset import VolleyballDataset
 
+from Baseline3.model_B3 import PersonClassifierB3
+
 BASE_DIR = Path(__file__).resolve().parent
 
 def load_config(config_path="config.yaml"):
@@ -277,28 +279,30 @@ val_loader = DataLoader(
 # )
 
 
-class B3Model(nn.Module):
-    def __init__(self):
-        super().__init__()
+# class B3Model(nn.Module):
+#     def __init__(self):
+#         super().__init__()
 
-        resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+#         resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
 
-        self.backbone = nn.Sequential(*list(resnet.children())[:-1])
+#         self.backbone = nn.Sequential(*list(resnet.children())[:-1])
 
-        self.classifier = nn.Linear(2048, 8)
+#         self.classifier = nn.Linear(2048, 8)
 
-    def forward(self, x):
-        # x: [B,12,3,224,224]
+#     def forward(self, x):
+#         # x: [B,12,3,224,224]
         
-        B, P, C, H, W = x.shape
-        x = x.view(B*P, C, H, W)
-        features = self.backbone(x)
-        features = features.view(B, P, 2048)
-        features = features.mean(dim=1)
-        out = self.classifier(features)
+#         B, P, C, H, W = x.shape
+#         x = x.view(B*P, C, H, W)
+#         features = self.backbone(x)
+#         features = features.view(B, P, 2048)
+#         features = features.mean(dim=1)
+#         out = self.classifier(features)
 
-        return out
-model = B3Model()
+#         return out
+# model = B3Model()
+
+model = PersonClassifierB3()
 
 if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
