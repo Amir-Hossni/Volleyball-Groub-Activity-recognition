@@ -3,8 +3,8 @@ from pathlib import Path
 from tqdm.auto import tqdm
 import torch
 
-# from utlis.metrics import calculate_metrics
-from utlis.new_metrics import calculate_metrics
+from utlis.metrics import calculate_metrics
+
 from utlis.checkpoint import save_checkpoint
 from utlis.tensorboard import create_writer, log_metrics
 from utlis.early_stopping import EarlyStopping
@@ -123,9 +123,13 @@ class Trainer:
             seen += batch_size
 
             # Store predictions and targets for epoch-level metrics (CPU to avoid GPU memory accumulation)
-            all_predictions.append(predictions.cpu())
-            all_targets.append(targets.detach().cpu())
+            # all_predictions.append(predictions.cpu())
+            # all_targets.append(targets.detach().cpu())
 
+            # Keep tensors on GPU during epoch
+            all_predictions.append(predictions)
+            all_targets.append(targets)
+            
             train_bar.set_postfix(
                 loss=f"{loss_val:.4f}",
                 acc=f"{correct / seen * 100:.2f}%",
