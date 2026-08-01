@@ -31,7 +31,7 @@ from Data.preprocessing import prepare_model
 from Data.new_dataset import VolleyballDatasetv2
 # from Data.dataset import VolleyballDataset
 
-from Baseline3.model_B3 import GroupClassifierB3
+from Baseline3.model_B3 import GroupClassifierB3, PersonClassifierB3
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -302,7 +302,7 @@ val_loader = DataLoader(
 #         return out
 # model = B3Model()
 
-model = GroupClassifierB3()
+model = PersonClassifierB3()
 
 if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
@@ -337,12 +337,25 @@ for epoch in range(EPOCHS):
     #     labels = labels.to(device, non_blocking=True)
     for batch in train_bar:
 
-        inputs = batch["images"].to(
+        inputs = batch["images"]          # [B,P,C,H,W]
+        labels = batch["player_labels"]   # [B,P]
+
+        B, P, C, H, W = inputs.shape
+
+        inputs = inputs.reshape(B * P, C, H, W)
+        labels = labels.reshape(-1)
+
+        mask = labels != -1
+
+        inputs = inputs[mask]
+        labels = labels[mask]
+
+        inputs = inputs.to(
             device,
             non_blocking=True
         )
 
-        labels = batch["scene_label"].to(
+        labels = labels.to(
             device,
             non_blocking=True
         )
@@ -372,12 +385,25 @@ for epoch in range(EPOCHS):
         #     labels = labels.to(device, non_blocking=True)
         for batch in val_bar:
 
-            inputs = batch["images"].to(
-            device,
-            non_blocking=True
+            inputs = batch["images"]          # [B,P,C,H,W]
+            labels = batch["player_labels"]   # [B,P]
+
+            B, P, C, H, W = inputs.shape
+
+            inputs = inputs.reshape(B * P, C, H, W)
+            labels = labels.reshape(-1)
+
+            mask = labels != -1
+
+            inputs = inputs[mask]
+            labels = labels[mask]
+
+            inputs = inputs.to(
+                device,
+                non_blocking=True
             )
 
-            labels = batch["scene_label"].to(
+            labels = labels.to(
                 device,
                 non_blocking=True
             )
