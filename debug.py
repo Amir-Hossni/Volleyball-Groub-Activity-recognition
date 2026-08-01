@@ -31,7 +31,7 @@ from Data.preprocessing import prepare_model
 from Data.new_dataset import VolleyballDatasetv2
 # from Data.dataset import VolleyballDataset
 
-from Baseline3.model_B3 import PersonClassifierB3
+from Baseline3.model_B3 import GroupClassifierB3
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -302,7 +302,7 @@ val_loader = DataLoader(
 #         return out
 # model = B3Model()
 
-model = PersonClassifierB3()
+model = GroupClassifierB3()
 
 if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
