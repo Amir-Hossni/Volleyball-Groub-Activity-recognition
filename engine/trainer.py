@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from tqdm.auto import tqdm
 import torch
 
@@ -56,6 +57,7 @@ class Trainer:
         )
 
         self.best_f1 = 0.0
+        self.last_ckpt_path = Path(save_path).parent / "last_checkpoint.pth"
 
         self.scaler = torch.amp.GradScaler(
             self.device.type,
@@ -72,7 +74,6 @@ class Trainer:
         self.model.train()
 
         running_loss = 0.0
-        num_samples = 0
         correct = 0
         seen = 0
 
@@ -81,7 +82,7 @@ class Trainer:
 
         epoch_start = time.time()
 
-        train_bar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs} [train]", leave=True,)
+        train_bar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs} [train]", leave=False)
         for batch in train_bar:
             inputs, targets = self.adapter(batch)
 
@@ -111,9 +112,9 @@ class Trainer:
             self.scaler.step(self.optimizer)
             self.scaler.update()
 
+            loss_val = loss.item()
             batch_size = targets.size(0)
-            running_loss += loss.item() * batch_size
-            num_samples += batch_size
+            running_loss += loss_val
 
             # Cumulative accuracy for tqdm progress display
             predictions = outputs.detach().argmax(dim=1)
@@ -125,8 +126,8 @@ class Trainer:
             all_targets.append(targets.detach().cpu())
 
             train_bar.set_postfix(
-                loss=loss.item(),
-                acc=f"{correct / seen * 100:.1f}%",
+                loss=f"{loss_val:.4f}",
+                acc=f"{correct / seen * 100:.2f}%",
             )
 
         predictions = torch.cat(all_predictions)
@@ -140,77 +141,103 @@ class Trainer:
 
         metrics["epoch_time"] = time.time() - epoch_start
 
-        return running_loss / max(num_samples, 1), metrics
+        return running_loss / max(len(loader), 1), metrics
+
+    def _get_model_for_save(self):
+        """Unwrap DataParallel/DDP to get the underlying model."""
+        if isinstance(
+            self.model,
+            (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel),
+        ):
+            return self.model.module
+        return self.model
+
+    def _save_last_checkpoint(self, epoch, metrics=None):
+        """Save a rolling last checkpoint (overwrites each epoch)."""
+        save_checkpoint(
+            self.last_ckpt_path,
+            self._get_model_for_save(),
+            self.optimizer,
+            epoch,
+            metrics or {},
+            scaler=self.scaler,
+        )
 
     def fit(self, train_loader, val_loader):
         from engine.evaluator import evaluate
 
-        for epoch in range(self.epochs):
+        epoch = 0
+        try:
+            for epoch in range(self.epochs):
 
-            print("=" * 50)
-            print(f"Epoch [{epoch + 1}/{self.epochs}]")
-            print("=" * 50)
+                train_loss, train_metrics = self.train_one_epoch(train_loader, epoch)
 
-            train_loss, train_metrics = self.train_one_epoch(train_loader, epoch,)
-
-            val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{self.epochs} [val]", leave=True,)
-
-            val_loss, val_metrics = evaluate(
-            self.model,
-            val_bar,
-            self.criterion,
-            self.device,
-            self.adapter,
-            self.num_classes,
-            )
-
-            log_metrics(
-                self.writer,
-                {
-                    "Loss/train": train_loss,
-                    "F1/train": train_metrics["f1_score"],
-                    "Loss/val": val_loss,
-                    "F1/val": val_metrics["f1_score"],
-                },
-                epoch,
-            )
-
-            print(
-                f"""
-Train Loss: {train_loss:.4f}
-Train F1: {train_metrics['f1_score']:.4f}
-
-Val Loss: {val_loss:.4f}
-Val F1: {val_metrics['f1_score']:.4f}
-
-Epoch time: {train_metrics['epoch_time']:.1f}s
-"""
-            )
-
-            if val_metrics["f1_score"] > self.best_f1:
-                self.best_f1 = val_metrics["f1_score"]
-
-                model_to_save = (
-                    self.model.module
-                    if isinstance(
-                        self.model,
-                        (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel),
-                    )
-                    else self.model
+                val_bar = tqdm(
+                    val_loader,
+                    desc=f"Epoch {epoch+1}/{self.epochs} [val]",
+                    leave=False,
                 )
 
-                save_checkpoint(
-                    self.save_path,
-                    model_to_save,
-                    self.optimizer,
+                val_loss, val_metrics = evaluate(
+                    self.model,
+                    val_bar,
+                    self.criterion,
+                    self.device,
+                    self.adapter,
+                    self.num_classes,
+                    use_amp=self.use_amp,
+                )
+
+                log_metrics(
+                    self.writer,
+                    {
+                        "Loss/train": train_loss,
+                        "F1/train": train_metrics["f1_score"],
+                        "Loss/val": val_loss,
+                        "F1/val": val_metrics["f1_score"],
+                        "Accuracy/train": train_metrics["accuracy"],
+                        "Accuracy/val": val_metrics["accuracy"],
+                    },
                     epoch,
-                    {"val_f1": self.best_f1},
                 )
 
-                print("Best model saved")
+                tqdm.write(
+                    f"Epoch {epoch+1}/{self.epochs}, "
+                    f"Train Loss: {train_loss:.4f} "
+                    f"Train Accuracy: {train_metrics['accuracy']:.2f}% "
+                    f"Validation Loss: {val_loss:.4f} "
+                    f"Validation Accuracy: {val_metrics['accuracy']:.2f}% "
+                    f"Validation F1: {val_metrics['f1_score']:.4f}"
+                )
+                tqdm.write("=" * 25)
 
-            if self.early_stopping(val_metrics["f1_score"]):
-                print("Early stopping triggered")
-                break
+                if val_metrics["f1_score"] > self.best_f1:
+                    self.best_f1 = val_metrics["f1_score"]
 
-        self.writer.close()
+                    save_checkpoint(
+                        self.save_path,
+                        self._get_model_for_save(),
+                        self.optimizer,
+                        epoch,
+                        {"val_f1": self.best_f1},
+                        scaler=self.scaler,
+                    )
+
+                    tqdm.write(f"Best model saved (Val F1 = {self.best_f1:.4f})")
+
+                # Rolling last checkpoint (overwrites each epoch)
+                self._save_last_checkpoint(epoch, {"val_f1": val_metrics["f1_score"]})
+
+                if self.early_stopping(val_metrics["f1_score"]):
+                    tqdm.write("Early stopping triggered")
+                    break
+
+        except KeyboardInterrupt:
+            tqdm.write(
+                f"\nTraining interrupted at epoch {epoch + 1}. "
+                "Saving last checkpoint..."
+            )
+            self._save_last_checkpoint(epoch)
+
+        finally:
+            self.writer.close()

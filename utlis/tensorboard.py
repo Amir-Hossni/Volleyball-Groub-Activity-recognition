@@ -44,3 +44,5 @@ def log_metrics(writer, metrics, epoch):
             value,
             epoch
         )
+
+    writer.flush()

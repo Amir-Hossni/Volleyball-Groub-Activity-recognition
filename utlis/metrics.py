@@ -3,6 +3,23 @@ from torchmetrics.classification import MulticlassF1Score
 from sklearn.metrics import classification_report, confusion_matrix
 
 
+# Cache MulticlassF1Score instances so they are not recreated every epoch.
+# Keyed by (num_classes, f1_average, device) to keep the metric state isolated
+# per configuration while avoiding the per-call construction overhead.
+_f1_metric_cache = {}
+
+
+def _get_f1_metric(num_classes, f1_average, device):
+    key = (num_classes, f1_average, str(device))
+    metric = _f1_metric_cache.get(key)
+    if metric is None:
+        metric = MulticlassF1Score(
+            num_classes=num_classes,
+            average=f1_average,
+        ).to(device)
+        _f1_metric_cache[key] = metric
+    return metric
+
 
 def calculate_metrics(
     predictions,
@@ -44,16 +61,17 @@ def calculate_metrics(
         num_classes = (torch.max(targets).item() + 1 )
 
 
-    f1_metric = MulticlassF1Score(
-        num_classes=num_classes,
-        average=f1_average
-    ).to(targets.device)
-
+    f1_metric = _get_f1_metric(num_classes, f1_average, targets.device)
 
     f1 = f1_metric(
         predictions,
         targets
     ).item()
+
+    # MulticlassF1Score is stateful (accumulates TP/FP/FN counters).
+    # Reset after each call so the cached metric only reflects the
+    # current epoch's data, matching the original per-call behavior.
+    f1_metric.reset()
 
 
 

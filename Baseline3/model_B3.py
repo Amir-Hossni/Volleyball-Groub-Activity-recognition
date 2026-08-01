@@ -80,29 +80,16 @@ from torchvision.models import ResNet50_Weights
 
 class PersonClassifierB3(nn.Module):
 
-    def __init__(self, num_classes=8, pretrained=True):
+    def __init__(self, num_classes=9, pretrained=True):
         super().__init__()
 
-        resnet = models.resnet50(weights="DEFAULT" if pretrained else None)
+        self.model = models.resnet50(weights="DEFAULT" if pretrained else None)
 
-        self.backbone = nn.Sequential(*list(resnet.children())[:-1])
-
-        self.classifier = nn.Linear(2048,num_classes)
-
+        in_features = self.model.fc.in_features
+        self.model.fc = nn.Linear(in_features, num_classes)
 
     def forward(self, x):
-        # x = (B,12,3,224,224)
-        B,P,C,H,W = x.shape
-
-        x = x.view(B*P,C,H,W)
-        features = self.backbone(x)
-        features = torch.flatten(features, start_dim=1)
-        # (B,12,2048)
-        features = features.view(B,P,2048)
-        # max pooling over players
-        features,_ = torch.max(features, dim=1)
-
-        return self.classifier(features)
+        return self.model(x)
     
 class GroupClassifierB3(nn.Module):
 
@@ -110,6 +97,7 @@ class GroupClassifierB3(nn.Module):
         super().__init__()
 
         self.backbone = backbone
+        
         self.feature_dim = 2048
 
         self.num_players = num_players
