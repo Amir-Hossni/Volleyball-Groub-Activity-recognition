@@ -48,7 +48,7 @@ class Trainer:
 
         if self.is_cuda:
             # Fixed-size inputs -> let cuDNN pick the fastest conv algorithms once
-            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.benchmark = False
 
         self.writer = create_writer(f"runs/{log_name}")
 
@@ -123,12 +123,12 @@ class Trainer:
             seen += batch_size
 
             # Store predictions and targets for epoch-level metrics (CPU to avoid GPU memory accumulation)
-            # all_predictions.append(predictions.cpu())
-            # all_targets.append(targets.detach().cpu())
+            all_predictions.append(predictions.cpu())
+            all_targets.append(targets.detach().cpu())
 
-            # Keep tensors on GPU during epoch
-            all_predictions.append(predictions)
-            all_targets.append(targets)
+            # # Keep tensors on GPU during epoch
+            # all_predictions.append(predictions)
+            # all_targets.append(targets)
             
             train_bar.set_postfix(
                 loss=f"{loss_val:.4f}",

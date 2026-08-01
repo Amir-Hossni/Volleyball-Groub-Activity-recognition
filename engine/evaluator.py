@@ -58,11 +58,9 @@ def evaluate(
         seen += targets.size(0)
 
         # Move to CPU immediately to avoid GPU memory accumulation
-        # all_predictions.append(predictions.cpu())
-        # all_targets.append(targets.cpu())
+        all_predictions.append(predictions.cpu())
+        all_targets.append(targets.cpu())
         
-        all_predictions.append(predictions)
-        all_targets.append(targets)
         
         # Update tqdm progress bar if the loader is wrapped with tqdm
         if hasattr(loader, 'set_postfix'):
