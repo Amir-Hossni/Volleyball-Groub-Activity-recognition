@@ -11,7 +11,7 @@ from Data.preprocessing import prepare_model
 
 
 from engine.trainer import Trainer
-from engine.adapters import identity_adapter
+from engine.adapters import flatten_person_batch
 
 # from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
@@ -139,14 +139,17 @@ model = PersonClassifierB3(
     pretrained=True
 )
 
+
+# person_model.load_state_dict(torch.load("person.pth"))
+# backbone = person_model.backbone
+#backbone.fc = nn.Identity()
+# group_model = GroupClassifierB3(backbone)
 # model = PersonClassifierB3(
 #     num_classes=len(player_to_idx),
 #     pretrained=True,
 #     freeze_backbone=False
 # )
-# person_model.load_state_dict(torch.load("person.pth"))
-# backbone = person_model.backbone
-# group_model = GroupClassifierB3(backbone)
+
 
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
@@ -176,10 +179,10 @@ trainer = Trainer(
     optimizer=optimizer,
     criterion=criterion,
     device=device,
-    adapter=identity_adapter,
+    adapter=flatten_person_batch,
     num_classes=8,
-    save_path="/kaggle/working/best_B3_group.pth",
-    log_name="B3_group_stage1",
+    save_path="/kaggle/working/best_B3_person_stage1.pth",
+    log_name="B3_person_stage1",
     epochs=50,
     use_amp=True,
     grad_clip=None,
