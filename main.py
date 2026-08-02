@@ -141,6 +141,10 @@ person_model = PersonClassifierB3(
 )
 
 #stage2
+checkpoint = torch.load(
+    "/kaggle/working/best_B3_person_stage1.pth",
+    map_location=device
+)
 person_model.load_state_dict(torch.load("/kaggle/working/best_B3_person_stage1.pth"))
 # extract backbone
 backbone = person_model.model
