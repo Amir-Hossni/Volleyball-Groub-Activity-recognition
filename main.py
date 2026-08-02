@@ -145,7 +145,10 @@ checkpoint = torch.load(
     "/kaggle/working/best_B3_person_stage1.pth",
     map_location=device
 )
-person_model.load_state_dict(torch.load("/kaggle/working/best_B3_person_stage1.pth"))
+
+person_model.load_state_dict(
+    checkpoint["model_state_dict"]
+)
 # extract backbone
 backbone = person_model.model
 # remove classification head
