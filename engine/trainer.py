@@ -3,11 +3,16 @@ from pathlib import Path
 from tqdm.auto import tqdm
 import torch
 
-from utlis.metrics import calculate_metrics
+from utlis.metrics import calculate_metrics, save_confusion_matrix
 
 from utlis.checkpoint import save_checkpoint
-from utlis.tensorboard import create_writer, log_metrics
+from utlis.tensorboard import (
+    create_writer,
+    log_metrics,
+    log_confusion_matrix,
+)
 from utlis.early_stopping import EarlyStopping
+from utlis.logger import TrainingLogger
 
 
 class Trainer:
@@ -21,6 +26,7 @@ class Trainer:
         adapter,
         num_classes,
         save_path,
+        class_names=None,
         log_name="training",
         epochs=50,
         early_stop_patience=10,
@@ -40,6 +46,7 @@ class Trainer:
         self.adapter = adapter
         self.num_classes = num_classes
         self.save_path = save_path
+        self.class_names = class_names
         self.epochs = epochs
         self.grad_clip = grad_clip
 
@@ -52,12 +59,15 @@ class Trainer:
 
         self.writer = create_writer(f"runs/{log_name}")
 
+        # Simple epoch-level text logger (runs/{log_name}/{log_name}.log)
+        self.logger = TrainingLogger(log_name=log_name)
+
         self.early_stopping = EarlyStopping(
             patience=early_stop_patience,
             mode="max",
         )
 
-        self.best_f1 = 0.0
+        self.best_acc = 0.0
         self.last_ckpt_path = Path(save_path).parent / "last_checkpoint.pth"
 
         self.scaler = torch.amp.GradScaler(
@@ -117,14 +127,16 @@ class Trainer:
             batch_size = targets.size(0)
             running_loss += loss_val
 
-            # Cumulative accuracy for tqdm progress display
-            predictions = outputs.detach().argmax(dim=1)
+            # Cumulative accuracy for tqdm progress display.
+            # argmax produces a non-GPU-grad tensor, so no extra detach is needed.
+            predictions = outputs.argmax(dim=1)
             correct += (predictions == targets).sum().item()
             seen += batch_size
 
-            # Store predictions and targets for epoch-level metrics (CPU to avoid GPU memory accumulation)
+            # Store predictions and targets for epoch-level metrics
+            # (CPU to avoid GPU memory accumulation; computed once at epoch end).
             all_predictions.append(predictions.cpu())
-            all_targets.append(targets.detach().cpu())
+            all_targets.append(targets.cpu())
 
             # # Keep tensors on GPU during epoch
             # all_predictions.append(predictions)
@@ -183,7 +195,7 @@ class Trainer:
                     leave=False,
                 )
 
-                val_loss, val_metrics = evaluate(
+                val_loss, val_metrics, val_predictions, val_targets = evaluate(
                     self.model,
                     val_bar,
                     self.criterion,
@@ -191,6 +203,7 @@ class Trainer:
                     self.adapter,
                     self.num_classes,
                     use_amp=self.use_amp,
+                    return_preds_targets=True,
                 )
 
                 log_metrics(
@@ -216,25 +229,84 @@ class Trainer:
                 )
                 tqdm.write("=" * 25)
 
-                if val_metrics["f1_score"] > self.best_f1:
-                    self.best_f1 = val_metrics["f1_score"]
+                best_model_saved = False
+                if val_metrics["accuracy"] > self.best_acc:
+                    self.best_acc = val_metrics["accuracy"]
+                    best_model_saved = True
 
                     save_checkpoint(
                         self.save_path,
                         self._get_model_for_save(),
                         self.optimizer,
                         epoch,
-                        {"val_f1": self.best_f1},
+                        {
+                            "val_acc": self.best_acc,
+                            "val_f1": val_metrics["f1_score"],
+                        },
                         scaler=self.scaler,
                     )
 
-                    tqdm.write(f"Best model saved (Val F1 = {self.best_f1:.4f})")
+                    tqdm.write(
+                        f"Best model saved (Val Accuracy = {self.best_acc:.2f}%)"
+                    )
 
                 # Rolling last checkpoint (overwrites each epoch)
-                self._save_last_checkpoint(epoch, {"val_f1": val_metrics["f1_score"]})
+                self._save_last_checkpoint(
+                    epoch,
+                    {
+                        "val_acc": val_metrics["accuracy"],
+                        "val_f1": val_metrics["f1_score"],
+                    },
+                )
 
-                if self.early_stopping(val_metrics["f1_score"]):
+                # Build the validation confusion matrix once and both save it
+                # as a PNG file and log it to TensorBoard as an image.
+                # (Returns an open figure since save_path is None.)
+                cm_fig = save_confusion_matrix(
+                    val_predictions,
+                    val_targets,
+                    class_names=self.class_names,
+                    save_path=None,
+                    normalize="true",
+                    title=f"Validation Confusion Matrix - Epoch {epoch + 1}",
+                )
+
+                cm_path = Path(self.save_path).parent / "confusion_matrix_val.png"
+                cm_path.parent.mkdir(parents=True, exist_ok=True)
+                cm_fig.savefig(cm_path, dpi=150, bbox_inches="tight")
+                tqdm.write(f"Confusion matrix saved to {cm_path}")
+
+                log_confusion_matrix(
+                    self.writer,
+                    cm_fig,
+                    "ConfusionMatrix/val",
+                    epoch,
+                )
+
+                # Early stopping monitors validation accuracy (primary metric).
+                # F1 is still calculated and logged for analysis, but no longer
+                # drives checkpointing or early stopping.
+                early_stopped = self.early_stopping(val_metrics["accuracy"])
+                if early_stopped:
                     tqdm.write("Early stopping triggered")
+
+                # Write epoch-level summary to the text log file.
+                # This happens once per epoch (never inside the batch loop).
+                self.logger.log_epoch(
+                    epoch=epoch + 1,
+                    total_epochs=self.epochs,
+                    train_loss=train_loss,
+                    train_acc=train_metrics["accuracy"],
+                    val_loss=val_loss,
+                    val_acc=val_metrics["accuracy"],
+                    val_f1=val_metrics["f1_score"],
+                    epoch_time=train_metrics["epoch_time"],
+                    learning_rate=self.optimizer.param_groups[0]["lr"],
+                    best_model_saved=best_model_saved,
+                    early_stopped=early_stopped,
+                )
+
+                if early_stopped:
                     break
 
         except KeyboardInterrupt:

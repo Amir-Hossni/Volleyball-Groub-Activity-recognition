@@ -1,5 +1,9 @@
 import torch
+from pathlib import Path
 from torchmetrics.classification import MulticlassF1Score
+import matplotlib
+import matplotlib.pyplot as plt
+from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.metrics import classification_report, confusion_matrix
 
 
@@ -51,7 +55,7 @@ def calculate_metrics(
     # Accuracy
 
     correct = ( predictions == targets).sum().item()
-    total = targets.size(0)
+    total = targets.numel()
     accuracy = (100 * correct / total)
 
     # F1 Score using torchmetrics
@@ -104,3 +108,93 @@ def calculate_metrics(
 
 
     return metrics
+
+
+def _to_numpy(data):
+    """Move tensors to CPU and convert to NumPy, passing other types through."""
+    if hasattr(data, "cpu") and hasattr(data, "numpy"):
+        return data.cpu().numpy()
+    return data
+
+
+def save_confusion_matrix(
+    predictions,
+    targets,
+    class_names=None,
+    save_path=None,
+    normalize=None,
+    title="Confusion Matrix",
+):
+    """
+    Build and save a confusion matrix as a PNG image file.
+
+    Args:
+        predictions:
+            predicted class indices (tensor or numpy array)
+
+        targets:
+            ground truth class indices (tensor or numpy array)
+
+        class_names (list, optional):
+            display names for each class index. When omitted, numeric
+            labels 0..max_label are used.
+
+        save_path (str or Path, optional):
+            where to save the PNG file. If None, the figure is returned
+            instead (e.g. for TensorBoard logging).
+
+        normalize (str, optional):
+            None, "true", "pred" or "all" -- passed to sklearn's
+            ConfusionMatrixDisplay.
+
+        title (str):
+            figure title
+
+    Returns:
+        matplotlib.figure.Figure if save_path is None, else None.
+    """
+    
+
+    matplotlib.use("Agg")
+
+    
+
+    preds_cpu = _to_numpy(predictions)
+    targets_cpu = _to_numpy(targets)
+
+    # If class names are not provided, infer the label range from the data.
+    if class_names is None:
+        max_label = int(
+            max(
+                int(targets_cpu.max()) if targets_cpu.size > 0 else 0,
+                int(preds_cpu.max()) if preds_cpu.size > 0 else 0,
+            )
+        )
+        class_names = [str(i) for i in range(max_label + 1)]
+
+    labels = list(range(len(class_names)))
+
+    display = ConfusionMatrixDisplay.from_predictions(
+        targets_cpu,
+        preds_cpu,
+        labels=labels,
+        display_labels=class_names,
+        normalize=normalize,
+        cmap="Blues",
+        colorbar=True,
+    )
+    display.ax_.set_title(title)
+    display.figure_.set_size_inches(
+        max(6.0, len(class_names) * 0.9),
+        max(6.0, len(class_names) * 0.75),
+    )
+    display.figure_.tight_layout()
+
+    if save_path is None:
+        return display.figure_
+
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    display.figure_.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(display.figure_)
+    return None

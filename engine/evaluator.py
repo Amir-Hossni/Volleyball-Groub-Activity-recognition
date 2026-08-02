@@ -14,6 +14,7 @@ def evaluate(
     adapter,
     num_classes,
     use_amp=False,
+    return_preds_targets=False,
 ):
     """
     Evaluate the model on the given loader.
@@ -26,6 +27,12 @@ def evaluate(
         adapter: Batch adapter function.
         num_classes: Number of classes for metrics.
         use_amp: Whether to use automatic mixed precision.
+        return_preds_targets: If True, also return the concatenated
+            (predictions, targets) tensors for confusion-matrix generation.
+
+    Returns:
+        (avg_loss, metrics) or (avg_loss, metrics, predictions, targets)
+        when return_preds_targets is True.
     """
 
     model.eval()
@@ -80,5 +87,8 @@ def evaluate(
     )
 
     avg_loss = total_loss / max(len(loader), 1)
+
+    if return_preds_targets:
+        return avg_loss, metrics, predictions, targets
 
     return avg_loss, metrics

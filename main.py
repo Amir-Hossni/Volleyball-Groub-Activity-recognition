@@ -182,6 +182,7 @@ trainer = Trainer(
     adapter=flatten_person_batch,
     num_classes=len(player_to_idx),
     save_path="/kaggle/working/best_B3_person_stage1.pth",
+    class_names=list(player_to_idx),
     log_name="B3_person_stage1",
     epochs=50,
     use_amp=True,
