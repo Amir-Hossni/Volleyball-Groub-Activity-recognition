@@ -250,6 +250,32 @@ class Trainer:
                         f"Best model saved (Val Accuracy = {self.best_acc:.2f}%)"
                     )
 
+                    # Build the validation confusion matrix only when a new
+                    # best model is saved, so the final image corresponds to
+                    # the best checkpoint. Both save it as a PNG file and log
+                    # it to TensorBoard as an image.
+                    # (Returns an open figure since save_path is None.)
+                    cm_fig = save_confusion_matrix(
+                        val_predictions,
+                        val_targets,
+                        class_names=self.class_names,
+                        save_path=None,
+                        normalize="true",
+                        title=f"Validation Confusion Matrix - Epoch {epoch + 1}",
+                    )
+
+                    cm_path = Path(self.save_path).parent / "confusion_matrix_val.png"
+                    cm_path.parent.mkdir(parents=True, exist_ok=True)
+                    cm_fig.savefig(cm_path, dpi=150, bbox_inches="tight")
+                    tqdm.write(f"Confusion matrix saved to {cm_path}")
+
+                    log_confusion_matrix(
+                        self.writer,
+                        cm_fig,
+                        "ConfusionMatrix/val",
+                        epoch,
+                    )
+
                 # Rolling last checkpoint (overwrites each epoch)
                 self._save_last_checkpoint(
                     epoch,
@@ -257,30 +283,6 @@ class Trainer:
                         "val_acc": val_metrics["accuracy"],
                         "val_f1": val_metrics["f1_score"],
                     },
-                )
-
-                # Build the validation confusion matrix once and both save it
-                # as a PNG file and log it to TensorBoard as an image.
-                # (Returns an open figure since save_path is None.)
-                cm_fig = save_confusion_matrix(
-                    val_predictions,
-                    val_targets,
-                    class_names=self.class_names,
-                    save_path=None,
-                    normalize="true",
-                    title=f"Validation Confusion Matrix - Epoch {epoch + 1}",
-                )
-
-                cm_path = Path(self.save_path).parent / "confusion_matrix_val.png"
-                cm_path.parent.mkdir(parents=True, exist_ok=True)
-                cm_fig.savefig(cm_path, dpi=150, bbox_inches="tight")
-                tqdm.write(f"Confusion matrix saved to {cm_path}")
-
-                log_confusion_matrix(
-                    self.writer,
-                    cm_fig,
-                    "ConfusionMatrix/val",
-                    epoch,
                 )
 
                 # Early stopping monitors validation accuracy (primary metric).

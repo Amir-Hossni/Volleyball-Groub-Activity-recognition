@@ -4,6 +4,7 @@ from pathlib import Path
 import yaml
 from torch.utils.data import DataLoader
 import torch
+import torch.nn as nn
 
 from Data.dataset import VolleyballDataset
 from Data.new_dataset import VolleyballDatasetv2
@@ -11,7 +12,7 @@ from Data.preprocessing import prepare_model
 
 
 from engine.trainer import Trainer
-from engine.adapters import flatten_person_batch
+from engine.adapters import flatten_person_batch, identity_adapter
 
 # from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
@@ -134,22 +135,24 @@ device = torch.device(
 
 # B3
 #stage1
-model = PersonClassifierB3(
+person_model = PersonClassifierB3(
     num_classes=len(player_to_idx),
-    pretrained=True
+    pretrained=False
 )
 
+#stage2
+person_model.load_state_dict(torch.load("/kaggle/working/best_B3_person_stage1.pth"))
+# extract backbone
+backbone = person_model.model
+# remove classification head
+backbone.fc = nn.Identity()
+# build group model
+group_model = GroupClassifierB3(
+    backbone=backbone,
+    num_players=12,
+    num_classes=8)
 
-# person_model.load_state_dict(torch.load("person.pth"))
-# backbone = person_model.backbone
-#backbone.fc = nn.Identity()
-# group_model = GroupClassifierB3(backbone)
-# model = PersonClassifierB3(
-#     num_classes=len(player_to_idx),
-#     pretrained=True,
-#     freeze_backbone=False
-# )
-
+model = group_model
 
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
@@ -174,7 +177,7 @@ optimizer = torch.optim.AdamW(
 
 
 #Trainer
-trainer = Trainer(
+trainer_b3_stage1 = Trainer(
     model=model,
     optimizer=optimizer,
     criterion=criterion,
@@ -189,26 +192,30 @@ trainer = Trainer(
     grad_clip=None,
 )
 
+trainer_b3_stage2 = Trainer(
+    model=model,
+    optimizer=optimizer,
+    criterion=criterion,
+    device=device,
+    adapter=identity_adapter,
+    num_classes=len(scene_to_idx),
+    save_path="/kaggle/working/best_B3_group_stage2.pth",
+    class_names=list(scene_to_idx),
+    log_name="B3_group_stage2",
+    epochs=50,
+    use_amp=True,
+    grad_clip=None,
+)
+
+
 if __name__ == "__main__":
     
-    # import psutil
-
-    # print("CPU:", psutil.cpu_percent(interval=2))
-    # print("RAM:", psutil.virtual_memory().percent)
-    
-    # train(
-    #     model,
-    #     train_loader,
-    #     val_loader,
-    #     criterion,
-    #     optimizer,
-    #     device,
-    #     epochs=50,
-    #     save_path="/kaggle/working/best_B2_model.pth"
-    # )
     
     
-    trainer.fit(train_loader, val_loader)
+    
+    
+    
+    trainer_b3_stage2.fit(train_loader, val_loader)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
