@@ -28,7 +28,7 @@ from sklearn.metrics import (
 from Data.boxinfo import BoxInfo
 from Data.volleyball_annot_loader import load_tracking_annot
 from Data.preprocessing import prepare_model
-from Data.new_dataset import VolleyballDatasetv2
+from Data.dataset import VolleyballDatasetv2
 # from Data.dataset import VolleyballDataset
 
 from Baseline3.model_B3 import GroupClassifierB3, PersonClassifierB3

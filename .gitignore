@@ -45,7 +45,7 @@ volleyball_tracking_annotation/
 
 # TensorBoard logs
 runs/
-logs/
+# logs/
 
 
 # Kaggle files
