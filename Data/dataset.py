@@ -420,7 +420,7 @@ class VolleyballDatasetv2(Dataset):
 
                 "frames": torch.stack(frames),
 
-                "players": players,
+                # "players": players,
 
                 "scene_label": sample["scene_label"]
             }
