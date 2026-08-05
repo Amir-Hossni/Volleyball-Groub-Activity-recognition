@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 
-from Data.datasetDIC import VolleyballDataset
+# from Data.datasetDIC import VolleyballDataset
 from Data.dataset import VolleyballDatasetv2
 from Data.preprocessing import prepare_model
 
