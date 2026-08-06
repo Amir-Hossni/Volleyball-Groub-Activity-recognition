@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 # from Data.datasetDIC import VolleyballDataset
-from Data.dataset import VolleyballDatasetv2
+from Data.dataset import VolleyballDataset
 from Data.preprocessing import prepare_model
 
 
@@ -74,24 +74,24 @@ transform = prepare_model(image_level=True)
 # )
 
 ##datset_new_ver
-train_dataset = VolleyballDatasetv2(
+train_dataset = VolleyballDataset(
     videos_path=videos_path,
     annot_root=annot_root,
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="frame",
+    mode="clip_frames",
     transform=transform
 )
 
 
-val_dataset = VolleyballDatasetv2(
+val_dataset = VolleyballDataset(
     videos_path=videos_path,
     annot_root=annot_root,
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="frame",
+    mode="clip_frames",
     transform=transform
 )
 # # DataLoader
@@ -172,13 +172,23 @@ group_model = GroupClassifierB3(
 
 
 #Baseline4
+checkpoint = torch.load(
+    "/kaggle/working/best_Baseline1.pth",
+    map_location=device
+)
+
+model_B1.load_state_dict(
+    checkpoint["model_state_dict"]
+)
+# extract backbone
+backbone1 = model_B1.model
 model_B4 = TemporalImageClassifierB4(
     num_classes=8,
-    pretrained=False
+    backbone=backbone1,
 )
 
 
-model = model_B1
+model = model_B4
 
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
@@ -195,7 +205,8 @@ criterion = torch.nn.CrossEntropyLoss(
 # Optimizer
 optimizer = torch.optim.AdamW(
     model.parameters(),
-    lr=1e-4
+    lr=1e-4,
+    weight_decay=1e-4
 )
 
 
@@ -277,7 +288,7 @@ trainer_Baseline4 = Trainer(
 
 if __name__ == "__main__":
     
-    trainer_Baseline1.fit(train_loader, val_loader)
+    trainer_Baseline4.fit(train_loader, val_loader)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     

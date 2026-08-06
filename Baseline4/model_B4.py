@@ -7,8 +7,8 @@ class TemporalImageClassifierB4(nn.Module):
 
     def __init__(
         self,
+        backbone,
         num_classes=8,
-        pretrained=True,
         lstm_hidden=512,
         lstm_layers=1,
         dropout=0.2
@@ -17,12 +17,11 @@ class TemporalImageClassifierB4(nn.Module):
 
       
         # CNN Backbone
-        self.backbone = models.resnet50(weights="DEFAULT" if pretrained else None)
-        self.feature_dim = self.backbone.fc.in_features   # 2048
-
+        self.backbone = backbone
+        self.feature_dim = 2048   
         # remove classifier
         self.backbone.fc = nn.Identity()
-
+        
         # Temporal model
         self.lstm = nn.LSTM(
             input_size=self.feature_dim,   # 2048
