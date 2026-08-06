@@ -14,11 +14,10 @@ from Data.preprocessing import prepare_model
 from engine.trainer import Trainer
 from engine.adapters import flatten_person_batch, identity_adapter
 
-# from Baseline2.model_B2 import B2Model
+from Baseline1.model_B1 import SceneClassifierB1
+from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Baseline4.model_B4 import TemporalImageClassifierB4
-
-# from Baseline2.training_B2 import train
 
 
 # from Data.create_annot_pkl import create_pkl_version
@@ -81,7 +80,7 @@ train_dataset = VolleyballDatasetv2(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="clip",
+    mode="frame",
     transform=transform
 )
 
@@ -92,7 +91,7 @@ val_dataset = VolleyballDatasetv2(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="clip",
+    mode="frame",
     transform=transform
 )
 # # DataLoader
@@ -126,13 +125,23 @@ device = torch.device(
 
 # Model
 ################
+#b1
+model_B1 = SceneClassifierB1(
+    num_classes=len(scene_to_idx),
+    pretrained=True
+)
+
+
 
 #B2
-# model = B2Model(
-#     num_players=12,
-#     num_classes=len(scene_to_idx),
-#     pretrained=True
-# )
+model_B2 = B2Model(
+    num_players=12,
+    num_classes=len(scene_to_idx),
+    pretrained=True
+)
+
+
+
 
 # B3
 #stage1
@@ -160,11 +169,16 @@ group_model = GroupClassifierB3(
     num_players=12,
     num_classes=8)
 
+
+
 #Baseline4
-model = TemporalImageClassifierB4(
+model_B4 = TemporalImageClassifierB4(
     num_classes=8,
     pretrained=False
 )
+
+
+model = model_B1
 
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
@@ -189,6 +203,27 @@ optimizer = torch.optim.AdamW(
 
 
 #Trainer
+
+trainer_Baseline1 = Trainer(
+    model=model,
+    optimizer=optimizer,
+    criterion=criterion,
+    device=device,
+    adapter=lambda batch: identity_adapter(
+        batch,
+        input_key="frames",
+        target_key="scene_label"
+    ),
+    num_classes=len(scene_to_idx),
+    save_path="/kaggle/working/best_Baseline1.pth",
+    class_names=list(scene_to_idx),
+    log_name="Baseline1",
+    epochs=50,
+    use_amp=True,
+    grad_clip=None,
+)
+
+
 trainer_b3_stage1 = Trainer(
     model=model,
     optimizer=optimizer,
@@ -242,7 +277,7 @@ trainer_Baseline4 = Trainer(
 
 if __name__ == "__main__":
     
-    trainer_Baseline4.fit(train_loader, val_loader)
+    trainer_Baseline1.fit(train_loader, val_loader)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
