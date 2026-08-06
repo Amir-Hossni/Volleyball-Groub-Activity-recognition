@@ -201,7 +201,7 @@ class VolleyballDatasetv2(Dataset):
 
 
 
-    def _add_frame_samples(
+    def _add_frame_samples_temp(
         self,
         video_id,
         clip_id,
@@ -222,6 +222,32 @@ class VolleyballDatasetv2(Dataset):
                     "scene_label": scene_label
                 }
             )
+    
+    def _add_frame_samples(
+        self,
+        video_id,
+        clip_id,
+        clip_path,
+        frame_boxes,
+        scene_label
+    ):
+
+        frame_ids = sorted(frame_boxes.keys())
+
+        middle_idx = len(frame_ids) // 2
+
+        frame_id = frame_ids[middle_idx]
+
+
+        self.samples.append(
+            {
+                "video_id": video_id,
+                "clip_id": clip_id,
+                "frame_id": frame_id,
+                "frame_path": clip_path / f"{frame_id}.jpg",
+                "scene_label": scene_label
+            }
+        )        
 
 
     def __len__(self):
@@ -367,26 +393,14 @@ class VolleyballDatasetv2(Dataset):
 
             image = self._load_image(sample["frame_path"])
 
-            player_images = []
 
-            for box in sample["boxes"]:
+            if self.transform:
+                image = self.transform(image)
 
-                crop = self._crop_player(image, box)
-
-                if self.transform:
-                    crop = self.transform(crop)
-
-                player_images.append(crop)
-
-            # Padding missing players
-            while len(player_images) < 12:
-                player_images.append(torch.zeros_like(player_images[0]))
-
-            player_images = torch.stack(player_images)
 
             return {
 
-                "images": player_images,
+                "image": image,
 
                 "scene_label": sample["scene_label"],
 

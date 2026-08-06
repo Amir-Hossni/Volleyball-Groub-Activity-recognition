@@ -211,7 +211,7 @@ trainer_Baseline1 = Trainer(
     device=device,
     adapter=lambda batch: identity_adapter(
         batch,
-        input_key="frames",
+        input_key="image",
         target_key="scene_label"
     ),
     num_classes=len(scene_to_idx),
