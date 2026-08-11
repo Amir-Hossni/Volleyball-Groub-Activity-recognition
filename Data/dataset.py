@@ -63,10 +63,8 @@ class VolleyballDataset(Dataset):
                 frame_boxes = load_tracking_annot(tracking_file)
                 scene_label = self.scene_to_idx[clip_categories[clip_id]]
 
-                # ============================
                 # B3 Stage 1
                 # CNN on single player crop
-                # ============================
                 if self.mode == "person":
                     self._add_person_samples(
                         video_id,
@@ -76,10 +74,8 @@ class VolleyballDataset(Dataset):
                         scene_label,
                     )
 
-                # ============================
                 # B3 Stage 2
                 # 12 players from one frame
-                # ============================
                 elif self.mode == "person_grouped":
                     self._add_person_grouped_samples(
                         video_id,
@@ -89,10 +85,8 @@ class VolleyballDataset(Dataset):
                         scene_label,
                     )
 
-                # ============================
                 # B1
                 # middle frame only
-                # ============================
                 elif self.mode == "single_frame":
                     self._add_single_frame_samples(
                         video_id,
@@ -104,9 +98,7 @@ class VolleyballDataset(Dataset):
 
                 # ============================
                 # B4 / B6
-                # sequence of 9 images
-                # no players
-                # ============================
+                # sequence of 9 images / no players
                 elif self.mode == "clip_frames":
                     self._add_clip_samples(
                         video_id,
@@ -115,11 +107,8 @@ class VolleyballDataset(Dataset):
                         scene_label,
                     )
 
-                # ============================
                 # B5 / B7
-                # player tracklets
-                # 12 players x 9 frames
-                # ============================
+                # player tracklets 12 players x 9 frames
                 elif self.mode == "person_temporal":
                     self._add_person_temporal_samples(
                         video_id,
@@ -129,10 +118,9 @@ class VolleyballDataset(Dataset):
                         scene_label,
                     )
 
-                # ============================
+        
                 # backup only
                 # old clip with players
-                # ============================
                 elif self.mode == "clip_with_players":
                     self.samples.append(
                         {
@@ -146,12 +134,7 @@ class VolleyballDataset(Dataset):
                 else:
                     raise ValueError("Unknown mode")
 
-    # =====================================================
     # B3 Stage 1
-    # One sample = one player crop
-    # Output later:
-    # image -> player_label
-    # =====================================================
     def _add_person_samples(
         self,
         video_id,
@@ -160,6 +143,10 @@ class VolleyballDataset(Dataset):
         frame_boxes,
         scene_label,
     ):
+        
+        """ One sample = one player crop
+            Output later:
+            image -> player_label """
         for frame_id, boxes in frame_boxes.items():
             for box in boxes:
                 self.samples.append(
@@ -174,16 +161,7 @@ class VolleyballDataset(Dataset):
                     }
                 )
 
-    # =====================================================
     # B3 Stage 2
-    # One sample = 12 players from ONE frame
-    #
-    # Used after B3 stage1:
-    # crop players -> CNN -> pooling -> scene
-    #
-    # Output later:
-    # images [12,C,H,W]
-    # =====================================================
     def _add_person_grouped_samples(
         self,
         video_id,
@@ -192,6 +170,14 @@ class VolleyballDataset(Dataset):
         frame_boxes,
         scene_label,
     ):
+        
+        """ One sample = 12 players from ONE frame
+            
+            Used after B3 stage1:
+            crop players -> CNN -> pooling -> scene
+            
+            Output later:
+            images [12,C,H,W]  """
         # take first frame in clip
         # (because tracking annotation already keeps middle frames)
         frame_id = next(iter(frame_boxes))
@@ -217,16 +203,9 @@ class VolleyballDataset(Dataset):
             }
         )
 
-    # =====================================================
+  
     # B1
     # Image classification
-    #
-    # Only middle frame
-    # Full image
-    #
-    # Output later:
-    # image [C,H,W]
-    # =====================================================
     def _add_single_frame_samples(
         self,
         video_id,
@@ -235,6 +214,12 @@ class VolleyballDataset(Dataset):
         frame_boxes,
         scene_label,
     ):
+        """  Only middle frame
+            Full image
+            
+            Output later:
+            image [C,H,W] """
+        
         frame_ids = sorted(frame_boxes.keys())
         middle_idx = len(frame_ids) // 2
         frame_id = frame_ids[middle_idx]
@@ -249,18 +234,17 @@ class VolleyballDataset(Dataset):
             }
         )
 
-    # =====================================================
+
     # B4 / B6
     # Temporal image model
-    #
-    # One sample = one clip
-    #
-    # Output later:
-    # frames [T,C,H,W]
-    #
-    # T = 9
-    # =====================================================
     def _add_clip_samples(self, video_id, clip_id, frame_boxes, scene_label):
+        """ One sample = one clip
+            
+            Output later:
+            frames [T,C,H,W]
+            
+            T = 9 """
+        
         self.samples.append(
             {
                 "video_id": video_id,
@@ -270,27 +254,8 @@ class VolleyballDataset(Dataset):
             }
         )
 
-    # =====================================================
     # B5 / B7
-    # NEW
-    #
-    # One sample = one clip
-    #
-    # We keep every player's trajectory:
-    #
-    # player0:
-    #   frame1 crop
-    #   frame2 crop
-    #   ...
-    #   frame9 crop
-    #
-    # player1:
-    #   frame1 crop
-    #   ...
-    #
-    # Output later:
-    # images [12,9,C,H,W]
-    # =====================================================
+    # Temporal player model
     def _add_person_temporal_samples(
         self,
         video_id,
@@ -299,14 +264,22 @@ class VolleyballDataset(Dataset):
         frame_boxes,
         scene_label,
     ):
+        
+        """We keep every player's trajectory:
+            player0:
+              frame1 crop
+              frame2 crop
+              ...
+              frame9 crop
+            player1:
+              frame1 crop
+            Output later:
+            images [12,9,C,H,W] """
+            
+            
         frame_ids = sorted(frame_boxes.keys())
 
-        # organize:
-        #
-        # player_id
-        #       |
-        #       list of frames
-        #
+        # organize:player_id to player_id
         player_tracks = {idx: [] for idx in range(12)}
 
         for frame_id in frame_ids:
@@ -316,7 +289,13 @@ class VolleyballDataset(Dataset):
             boxes = sorted(boxes, key=lambda x: x.player_ID)
 
             for box in boxes:
-                player_tracks[box.player_ID].append({"frame_id": frame_id, "box": box})
+                player_tracks[box.player_ID].append(
+                    {
+                        "frame_id": frame_id,
+                        "box": box,
+                        "label_idx": self.player_to_idx[box.category]
+                    }
+            )
 
         self.samples.append(
             {
@@ -341,16 +320,13 @@ class VolleyballDataset(Dataset):
     def __getitem__(self, index):
         sample = self.samples[index]
 
-        # =====================================================
+  
         # B3 Stage 1
-        #
         # Input:
         # one player crop
-        #
         # Output:
         # image:
         # [C,H,W]
-        #
         # player_label
         # =====================================================
         if self.mode == "person":
@@ -368,22 +344,9 @@ class VolleyballDataset(Dataset):
                 "clip_id": sample["clip_id"],
                 "frame_id": sample["frame_id"],
             }
-
-        # =====================================================
+            
         # B3 Stage 2
-        #
-        # Input:
-        # 12 players from one frame
-        #
-        # Output:
-        #
-        # images:
-        # [12,C,H,W]
-        #
-        # player_labels:
-        # [12]
-        #
-        # =====================================================
+
         elif self.mode == "person_grouped":
             image = self._load_image(sample["frame_path"])
             boxes = sample["boxes"]
@@ -419,16 +382,12 @@ class VolleyballDataset(Dataset):
                 "scene_label": sample["scene_label"],
             }
 
-        # =====================================================
+      
         # B1
-        #
         # Full image
         # middle frame only
-        #
         # Output:
         # image [C,H,W]
-        #
-        # =====================================================
         elif self.mode == "single_frame":
             image = self._load_image(sample["frame_path"])
 
@@ -440,12 +399,8 @@ class VolleyballDataset(Dataset):
                 "scene_label": sample["scene_label"],
             }
 
-        # =====================================================
+
         # B4 / B6
-        # B4:
-        # CNN -> features -> LSTM
-        #
-        # =====================================================
         elif self.mode == "clip_frames":
             frames = []
             frame_ids = sorted(sample["frame_boxes"].keys())
@@ -466,18 +421,37 @@ class VolleyballDataset(Dataset):
                 "scene_label": sample["scene_label"],
             }
 
+        # B5 stageA / B7
+       
         # B5 / B7
+        # Temporal player model
         elif self.mode == "person_temporal":
+
             player_tracks = sample["player_tracks"]
+
             all_players = []
+            player_labels = []
 
             for player_id in range(12):
+
                 track = player_tracks[player_id]
+
                 player_frames = []
 
+                # Get player label
+                if track:
+                    player_label = track[0]["label_idx"]
+                else:
+                    player_label = -1
+
+                player_labels.append(player_label)
+
+                # Build 9-frame sequence for this player
                 for item in track:
+
                     frame_id = item["frame_id"]
                     box = item["box"]
+
                     image_path = sample["clip_path"] / f"{frame_id}.jpg"
 
                     image = self._load_image(image_path)
@@ -488,41 +462,50 @@ class VolleyballDataset(Dataset):
 
                     player_frames.append(crop)
 
-                # Handle missing player
-                # Example:
-                # player disappeared
-                # We create zero sequence
-                # ==========================================
+                # Padding missing player
                 if len(player_frames) == 0:
+
                     if all_players:
-                        dummy = torch.zeros_like(all_players[0][0])
+                        pad = torch.zeros_like(all_players[0][0])
                     else:
-                        dummy = torch.zeros(3, 224, 224)
+                        pad = torch.zeros(3, 224, 224)
 
-                    player_frames = [dummy for _ in range(9)]
+                    player_frames = [pad for _ in range(9)]
 
-                # Ensure fixed temporal length
-                # Dataset gives 9 frames
-                # But safe handling:
-                # ==========================================
+                # Ensure exactly 9 frames
                 if len(player_frames) < 9:
+
                     pad = torch.zeros_like(player_frames[0])
+
                     while len(player_frames) < 9:
                         player_frames.append(pad.clone())
+
                 elif len(player_frames) > 9:
+
                     player_frames = player_frames[:9]
 
+                # (9, C, H, W)
                 player_frames = torch.stack(player_frames)
+
+                # Add this player's temporal sequence
                 all_players.append(player_frames)
 
+            # (12, 9, C, H, W)
             all_players = torch.stack(all_players)
+
+            # (12,)
+            player_labels = torch.tensor(
+                player_labels,
+                dtype=torch.long
+            )
 
             return {
                 "images": all_players,
+                "player_labels": player_labels,
                 "scene_label": sample["scene_label"],
             }
 
-        raise ValueError("Unknown mode")
+
 
 
 # B1  -> single_frame
@@ -538,3 +521,204 @@ class VolleyballDataset(Dataset):
 
 # B7  -> person_temporal + frame LSTM
 # B8  -> person_temporal + team pooling
+
+
+
+# ============================================================
+# Dataset Modes & Input Shapes per Baseline
+# ============================================================
+
+# B1 -> single_frame
+# Input:
+#   (B, C, H, W)
+# Example:
+#   (16, 3, 224, 224)
+#
+# Each sample = single frame
+# Model:
+#   ResNet50 -> Classifier
+#
+# Output:
+#   (B, num_classes)
+
+
+# ------------------------------------------------------------
+
+
+# B2 -> person
+# Input:
+#   (B, P, C, H, W)
+# Example:
+#   (16, 12, 3, 224, 224)
+#
+# Each sample = one clip with 12 players
+# Model:
+#   ResNet50 per player
+#   Concatenate player features
+#   MLP classifier
+#
+# Output:
+#   (B, num_classes)
+
+
+# ------------------------------------------------------------
+
+
+# B3A -> person
+# Input:
+#   (B, C, H, W)
+# Example:
+#   (16, 3, 224, 224)
+#
+# Each sample = single player crop
+# Task:
+#   Person action classification
+#
+# Model:
+#   ResNet50 -> 9 person classes
+#
+# Output:
+#   (B, 9)
+
+
+# ------------------------------------------------------------
+
+
+# B3B -> person_grouped
+# Input:
+#   (B, P, C, H, W)
+# Example:
+#   (16, 12, 3, 224, 224)
+#
+# Each sample = group of players
+#
+# Backbone:
+#   B3A trained ResNet50
+#
+# Flow:
+#   Player images
+#       |
+#   CNN features
+#       |
+#   Player pooling
+#       |
+#   Group classifier
+#
+# Output:
+#   (B, 8)
+
+
+# ------------------------------------------------------------
+
+
+# B4 -> clip_frames
+# Input:
+#   (B, T, C, H, W)
+# Example:
+#   (16, 9, 3, 224, 224)
+#
+# Each sample = temporal clip
+# T = number of frames
+#
+# Model:
+#   B1 Backbone
+#       |
+#   Frame features
+#       |
+#   LSTM
+#       |
+#   Classifier
+#
+# Output:
+#   (B, 8)
+
+
+# ------------------------------------------------------------
+
+
+# B5 -> person_temporal
+# Input:
+#   (B, T, P, C, H, W)
+# Example:
+#   (16, 9, 12, 3, 224, 224)
+#
+# Each sample:
+#   9 frames
+#   12 players per frame
+#
+# Model:
+#   Person CNN
+#       |
+#   Temporal modeling
+#       |
+#   Classifier
+#
+# Output:
+#   (B, 8)
+
+
+# ------------------------------------------------------------
+
+
+# B6 -> clip_frames
+# Input:
+#   (B, T, C, H, W)
+# Example:
+#   (16, 9, 3, 224, 224)
+#
+# Each sample = frame sequence
+#
+# Model:
+#   CNN feature extractor
+#       |
+#   Temporal aggregation
+#
+# Output:
+#   (B, 8)
+
+
+# ------------------------------------------------------------
+
+
+# B7 -> person_temporal + frame LSTM
+# Input:
+#   (B, T, P, C, H, W)
+# Example:
+#   (16, 9, 12, 3, 224, 224)
+#
+# Flow:
+#   Each frame:
+#       players
+#          |
+#       CNN
+#          |
+#     player features
+#
+#   Frame-level LSTM
+#
+# Output:
+#   (B, 8)
+
+
+# ------------------------------------------------------------
+
+
+# B8 -> person_temporal + team pooling
+# Input:
+#   (B, T, P, C, H, W)
+# Example:
+#   (16, 9, 12, 3, 224, 224)
+#
+# Flow:
+#   Player features
+#       |
+#   Team/Player pooling
+#       |
+#   Temporal model
+#       |
+#   Classifier
+#
+# Output:
+#   (B, 8)
+
+# ============================================================

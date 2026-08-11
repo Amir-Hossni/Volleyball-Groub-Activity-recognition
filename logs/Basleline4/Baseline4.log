@@ -1,0 +1,473 @@
+Epoch 1/50
+Train Loss: 0.5016
+Train Accuracy: 89.27%
+Validation Loss: 1.2313
+Validation Accuracy: 66.44%
+Validation F1: 0.6876
+Learning Rate: 0.000100
+Epoch Time: 193.7 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 2/50
+Train Loss: 0.1429
+Train Accuracy: 96.00%
+Validation Loss: 1.2275
+Validation Accuracy: 69.72%
+Validation F1: 0.7170
+Learning Rate: 0.000100
+Epoch Time: 149.2 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 3/50
+Train Loss: 0.0657
+Train Accuracy: 98.47%
+Validation Loss: 1.1792
+Validation Accuracy: 72.11%
+Validation F1: 0.7366
+Learning Rate: 0.000100
+Epoch Time: 151.6 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 4/50
+Train Loss: 0.0545
+Train Accuracy: 98.51%
+Validation Loss: 1.3070
+Validation Accuracy: 69.13%
+Validation F1: 0.7133
+Learning Rate: 0.000100
+Epoch Time: 150.6 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 5/50
+Train Loss: 0.0518
+Train Accuracy: 98.47%
+Validation Loss: 1.3447
+Validation Accuracy: 66.29%
+Validation F1: 0.6592
+Learning Rate: 0.000100
+Epoch Time: 145.2 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 6/50
+Train Loss: 0.0722
+Train Accuracy: 98.19%
+Validation Loss: 1.1288
+Validation Accuracy: 72.86%
+Validation F1: 0.7456
+Learning Rate: 0.000100
+Epoch Time: 142.9 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 7/50
+Train Loss: 0.0393
+Train Accuracy: 99.16%
+Validation Loss: 1.2360
+Validation Accuracy: 73.53%
+Validation F1: 0.7465
+Learning Rate: 0.000100
+Epoch Time: 143.3 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 8/50
+Train Loss: 0.0404
+Train Accuracy: 98.79%
+Validation Loss: 1.5294
+Validation Accuracy: 66.07%
+Validation F1: 0.6687
+Learning Rate: 0.000100
+Epoch Time: 142.4 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 9/50
+Train Loss: 0.0486
+Train Accuracy: 98.79%
+Validation Loss: 1.2805
+Validation Accuracy: 70.84%
+Validation F1: 0.7237
+Learning Rate: 0.000100
+Epoch Time: 142.0 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 10/50
+Train Loss: 0.0316
+Train Accuracy: 99.07%
+Validation Loss: 1.5825
+Validation Accuracy: 66.96%
+Validation F1: 0.6848
+Learning Rate: 0.000100
+Epoch Time: 141.4 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 11/50
+Train Loss: 0.0496
+Train Accuracy: 98.88%
+Validation Loss: 1.3059
+Validation Accuracy: 72.63%
+Validation F1: 0.7419
+Learning Rate: 0.000100
+Epoch Time: 140.5 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 12/50
+Train Loss: 0.0342
+Train Accuracy: 99.12%
+Validation Loss: 1.2589
+Validation Accuracy: 72.78%
+Validation F1: 0.7461
+Learning Rate: 0.000100
+Epoch Time: 141.4 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 13/50
+Train Loss: 0.0540
+Train Accuracy: 98.37%
+Validation Loss: 1.3826
+Validation Accuracy: 68.16%
+Validation F1: 0.6993
+Learning Rate: 0.000100
+Epoch Time: 141.2 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 14/50
+Train Loss: 0.0391
+Train Accuracy: 98.88%
+Validation Loss: 1.4661
+Validation Accuracy: 69.72%
+Validation F1: 0.7195
+Learning Rate: 0.000100
+Epoch Time: 139.6 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 15/50
+Train Loss: 0.0119
+Train Accuracy: 99.67%
+Validation Loss: 1.4119
+Validation Accuracy: 73.45%
+Validation F1: 0.7519
+Learning Rate: 0.000100
+Epoch Time: 146.3 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 16/50
+Train Loss: 0.0084
+Train Accuracy: 99.81%
+Validation Loss: 1.3663
+Validation Accuracy: 73.75%
+Validation F1: 0.7553
+Learning Rate: 0.000100
+Epoch Time: 157.2 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 17/50
+Train Loss: 0.0489
+Train Accuracy: 98.79%
+Validation Loss: 1.3322
+Validation Accuracy: 72.86%
+Validation F1: 0.7435
+Learning Rate: 0.000100
+Epoch Time: 157.0 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 18/50
+Train Loss: 0.0352
+Train Accuracy: 98.98%
+Validation Loss: 1.3464
+Validation Accuracy: 74.12%
+Validation F1: 0.7592
+Learning Rate: 0.000100
+Epoch Time: 156.8 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 19/50
+Train Loss: 0.0458
+Train Accuracy: 98.65%
+Validation Loss: 1.2646
+Validation Accuracy: 72.71%
+Validation F1: 0.7361
+Learning Rate: 0.000100
+Epoch Time: 159.2 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 20/50
+Train Loss: 0.0659
+Train Accuracy: 98.00%
+Validation Loss: 1.2542
+Validation Accuracy: 72.63%
+Validation F1: 0.7401
+Learning Rate: 0.000100
+Epoch Time: 158.3 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 21/50
+Train Loss: 0.0295
+Train Accuracy: 99.26%
+Validation Loss: 1.5478
+Validation Accuracy: 70.40%
+Validation F1: 0.7166
+Learning Rate: 0.000100
+Epoch Time: 148.4 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 22/50
+Train Loss: 0.0290
+Train Accuracy: 99.40%
+Validation Loss: 1.2546
+Validation Accuracy: 75.24%
+Validation F1: 0.7667
+Learning Rate: 0.000100
+Epoch Time: 152.2 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 23/50
+Train Loss: 0.0302
+Train Accuracy: 99.12%
+Validation Loss: 1.4879
+Validation Accuracy: 68.16%
+Validation F1: 0.7043
+Learning Rate: 0.000100
+Epoch Time: 158.7 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 24/50
+Train Loss: 0.0348
+Train Accuracy: 98.84%
+Validation Loss: 1.6468
+Validation Accuracy: 69.80%
+Validation F1: 0.7203
+Learning Rate: 0.000100
+Epoch Time: 160.2 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 25/50
+Train Loss: 0.0510
+Train Accuracy: 98.61%
+Validation Loss: 1.2432
+Validation Accuracy: 73.60%
+Validation F1: 0.7530
+Learning Rate: 0.000100
+Epoch Time: 159.2 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 26/50
+Train Loss: 0.0383
+Train Accuracy: 98.98%
+Validation Loss: 1.2879
+Validation Accuracy: 75.32%
+Validation F1: 0.7673
+Learning Rate: 0.000100
+Epoch Time: 156.8 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 27/50
+Train Loss: 0.0037
+Train Accuracy: 99.95%
+Validation Loss: 1.4928
+Validation Accuracy: 72.93%
+Validation F1: 0.7482
+Learning Rate: 0.000100
+Epoch Time: 156.8 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 28/50
+Train Loss: 0.0106
+Train Accuracy: 99.63%
+Validation Loss: 1.3603
+Validation Accuracy: 74.35%
+Validation F1: 0.7600
+Learning Rate: 0.000100
+Epoch Time: 157.6 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 29/50
+Train Loss: 0.0099
+Train Accuracy: 99.63%
+Validation Loss: 1.4941
+Validation Accuracy: 73.23%
+Validation F1: 0.7424
+Learning Rate: 0.000100
+Epoch Time: 154.4 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 30/50
+Train Loss: 0.0278
+Train Accuracy: 99.35%
+Validation Loss: 1.2832
+Validation Accuracy: 73.75%
+Validation F1: 0.7574
+Learning Rate: 0.000100
+Epoch Time: 159.0 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 31/50
+Train Loss: 0.0336
+Train Accuracy: 98.98%
+Validation Loss: 1.2432
+Validation Accuracy: 74.50%
+Validation F1: 0.7627
+Learning Rate: 0.000100
+Epoch Time: 157.2 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 32/50
+Train Loss: 0.0415
+Train Accuracy: 98.65%
+Validation Loss: 1.3035
+Validation Accuracy: 74.65%
+Validation F1: 0.7627
+Learning Rate: 0.000100
+Epoch Time: 149.9 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 33/50
+Train Loss: 0.0194
+Train Accuracy: 99.49%
+Validation Loss: 1.1960
+Validation Accuracy: 76.44%
+Validation F1: 0.7803
+Learning Rate: 0.000100
+Epoch Time: 145.2 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 34/50
+Train Loss: 0.0129
+Train Accuracy: 99.72%
+Validation Loss: 1.3430
+Validation Accuracy: 74.87%
+Validation F1: 0.7611
+Learning Rate: 0.000100
+Epoch Time: 143.1 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 35/50
+Train Loss: 0.0123
+Train Accuracy: 99.72%
+Validation Loss: 1.3745
+Validation Accuracy: 75.54%
+Validation F1: 0.7687
+Learning Rate: 0.000100
+Epoch Time: 143.3 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 36/50
+Train Loss: 0.0042
+Train Accuracy: 99.86%
+Validation Loss: 1.6931
+Validation Accuracy: 71.66%
+Validation F1: 0.7299
+Learning Rate: 0.000100
+Epoch Time: 143.0 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 37/50
+Train Loss: 0.0358
+Train Accuracy: 99.07%
+Validation Loss: 1.2940
+Validation Accuracy: 74.35%
+Validation F1: 0.7591
+Learning Rate: 0.000100
+Epoch Time: 143.5 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 38/50
+Train Loss: 0.0052
+Train Accuracy: 99.86%
+Validation Loss: 1.7362
+Validation Accuracy: 69.95%
+Validation F1: 0.7063
+Learning Rate: 0.000100
+Epoch Time: 140.8 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 39/50
+Train Loss: 0.0381
+Train Accuracy: 98.93%
+Validation Loss: 1.2701
+Validation Accuracy: 72.18%
+Validation F1: 0.7373
+Learning Rate: 0.000100
+Epoch Time: 140.6 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 40/50
+Train Loss: 0.0183
+Train Accuracy: 99.35%
+Validation Loss: 1.3013
+Validation Accuracy: 73.83%
+Validation F1: 0.7488
+Learning Rate: 0.000100
+Epoch Time: 138.8 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 41/50
+Train Loss: 0.0129
+Train Accuracy: 99.54%
+Validation Loss: 1.3664
+Validation Accuracy: 74.12%
+Validation F1: 0.7571
+Learning Rate: 0.000100
+Epoch Time: 139.1 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 42/50
+Train Loss: 0.0422
+Train Accuracy: 98.93%
+Validation Loss: 1.4091
+Validation Accuracy: 70.69%
+Validation F1: 0.7190
+Learning Rate: 0.000100
+Epoch Time: 139.2 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 43/50
+Train Loss: 0.0433
+Train Accuracy: 98.65%
+Validation Loss: 1.2489
+Validation Accuracy: 72.33%
+Validation F1: 0.7370
+Learning Rate: 0.000100
+Epoch Time: 139.0 seconds
+Best Model Saved: No
+Early Stopping: Yes
+--------------------------------

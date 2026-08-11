@@ -18,7 +18,7 @@ from Baseline1.model_B1 import SceneClassifierB1
 from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Baseline4.model_B4 import TemporalImageClassifierB4
-
+from Baseline5.model_B5 import PersonTemporalB5
 
 # from Data.create_annot_pkl import create_pkl_version
 
@@ -49,7 +49,7 @@ val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 
 
 # Transform
-transform = prepare_model(image_level=True)
+transform = prepare_model(image_level=False)
 
 
 # Dataset_old
@@ -80,7 +80,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="clip_frames",
+    mode="person_temporal",
     transform=transform
 )
 
@@ -91,7 +91,7 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="clip_frames",
+    mode="person_temporal",
     transform=transform
 )
 # # DataLoader
@@ -160,12 +160,12 @@ person_model.load_state_dict(
     checkpoint["model_state_dict"]
 )
 # extract backbone
-backbone = person_model.model
+backboneB3 = person_model.model
 # remove classification head
-backbone.fc = nn.Identity()
+backboneB3.fc = nn.Identity()
 # build group model
 group_model = GroupClassifierB3(
-    backbone=backbone,
+    backbone=backboneB3,
     num_players=12,
     num_classes=8)
 
@@ -188,7 +188,18 @@ model_B4 = TemporalImageClassifierB4(
 )
 
 
-model = model_B4
+
+#Basline5
+
+#stage1
+backboneB5 = backboneB3
+model = PersonTemporalB5(
+    backbone=backboneB5,
+    num_players=12,
+    lstm_hidden=512,
+    lstm_layers=1,
+    dropout=0.2
+)
 
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
@@ -214,7 +225,7 @@ optimizer = torch.optim.AdamW(
 
 
 #Trainer
-
+############################
 trainer_Baseline1 = Trainer(
     model=model,
     optimizer=optimizer,
@@ -285,10 +296,28 @@ trainer_Baseline4 = Trainer(
     grad_clip=None,
 )
 
-
+trainer_Baseline5 = Trainer(
+    model=model,
+    optimizer=optimizer,
+    criterion=criterion,
+    device=device,
+    adapter=lambda batch: flatten_person_batch(
+        batch,
+        input_key="images",
+        target_key="player_labels",
+        ignore_index=-1
+    ),
+    num_classes=len(player_to_idx),
+    save_path="/kaggle/working/best_Baseline5_stage1.pth",
+    class_names=list(player_to_idx),
+    log_name="Baseline5_stage1",
+    epochs=50,
+    use_amp=True,
+    grad_clip=None,
+)
 if __name__ == "__main__":
     
-    trainer_Baseline4.fit(train_loader, val_loader)
+    trainer_Baseline5.fit(train_loader, val_loader)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     

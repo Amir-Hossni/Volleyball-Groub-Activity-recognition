@@ -20,51 +20,66 @@ def identity_adapter(batch, input_key="images", target_key="scene_label"):
 
 
 
+
 def flatten_person_batch(
     batch,
     input_key="images",
     target_key="player_labels",
-    ignore_index=-1
+    ignore_index=-1,
 ):
     """
-    Convert:
-    images:
-        (B,P,C,H,W)
+    Supports:
 
-    labels:
-        (B,P)
+    B3:
+        images: (B, P, C, H, W)
+        labels: (B, P)
 
-    into:
+    B5:
+        images: (B, P, T, C, H, W)
+        labels: (B, P)
 
-    images:
-        (N,C,H,W)
+    Output:
 
-    labels:
-        (N,)
+    B3:
+        images: (N, C, H, W)
 
-    removing padded players.
+    B5:
+        images: (N, T, C, H, W)
+
+    N = valid players
     """
 
-
     images = batch[input_key]
-
     labels = batch[target_key]
 
-    B, P, C, H, W = images.shape
+    # B5 / temporal
+    if images.dim() == 6:
 
+        B, P, T, C, H, W = images.shape
 
-    images = images.reshape( B * P, C, H, W)
+        images = images.reshape(B * P, T, C, H, W,)
+
+    # B3 / single frame
+    elif images.dim() == 5:
+
+        B, P, C, H, W = images.shape
+
+        images = images.reshape(B * P, C, H, W,)
+
+    else:
+        raise ValueError(
+            f"Unexpected image shape: {images.shape}"
+        )
 
     labels = labels.reshape(-1)
 
-
+    # Remove padded players
     if ignore_index is not None:
 
         mask = labels != ignore_index
 
         images = images[mask]
-
         labels = labels[mask]
 
-
     return images, labels
+
