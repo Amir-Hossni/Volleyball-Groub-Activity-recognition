@@ -356,7 +356,6 @@ class VolleyballDataset(Dataset):
             }
             
         # B3 Stage 2
-        # B5 stage 2
         elif self.mode == "person_grouped":
             image = self._load_image(sample["frame_path"])
             boxes = sample["boxes"]
@@ -433,7 +432,7 @@ class VolleyballDataset(Dataset):
 
         
        
-        # B5_stage1 / B7
+        # B5/ B7
         # Temporal player model
         elif self.mode == "person_temporal":
 
