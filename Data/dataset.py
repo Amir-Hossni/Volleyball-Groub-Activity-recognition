@@ -429,14 +429,14 @@ class VolleyballDataset(Dataset):
 
             player_tracks = sample["player_tracks"]
 
-            # --------------------------------------------------
             # Prepare storage for 12 players
             # Each player will contain 9 frames
-            # --------------------------------------------------
             all_players = [[] for _ in range(12)]
             player_labels = []
 
+            # --------------------------------------------------
             # Get player labels
+            # --------------------------------------------------
             for player_id in range(12):
 
                 track = player_tracks[player_id]
@@ -451,6 +451,7 @@ class VolleyballDataset(Dataset):
             # --------------------------------------------------
             # Load each frame ONCE
             # --------------------------------------------------
+
             frame_ids = sorted(
                 {
                     item["frame_id"]
@@ -461,7 +462,9 @@ class VolleyballDataset(Dataset):
 
             for frame_id in frame_ids:
 
-                image_path = sample["clip_path"] / f"{frame_id}.jpg"
+                image_path = (
+                    sample["clip_path"] / f"{frame_id}.jpg"
+                )
 
                 # Load image only once
                 image = self._load_image(image_path)
@@ -477,6 +480,7 @@ class VolleyballDataset(Dataset):
                     box = None
 
                     for item in track:
+
                         if item["frame_id"] == frame_id:
                             box = item["box"]
                             break
@@ -495,32 +499,43 @@ class VolleyballDataset(Dataset):
                         all_players[player_id].append(crop)
 
             # --------------------------------------------------
+            # Find a reference tensor for padding
+            # --------------------------------------------------
+
+            reference_tensor = None
+
+            for player_frames in all_players:
+
+                if player_frames:
+                    reference_tensor = player_frames[0]
+                    break
+
+            # --------------------------------------------------
             # Ensure every player has exactly 9 frames
             # --------------------------------------------------
+
             for player_id in range(12):
 
                 player_frames = all_players[player_id]
 
+                # ----------------------------------------------
                 # Missing player completely
+                # ----------------------------------------------
                 if len(player_frames) == 0:
 
-                    if all_players[0]:
-                        pad = torch.zeros_like(
-                            all_players[0][0]
-                        )
+                    if reference_tensor is not None:
+                        pad = torch.zeros_like(reference_tensor)
                     else:
-                        pad = torch.zeros(
-                            3,
-                            224,
-                            224
-                        )
+                        pad = torch.zeros(3, 224, 224)
 
                     player_frames = [
                         pad.clone()
                         for _ in range(9)
                     ]
 
+                # ----------------------------------------------
                 # Less than 9 frames
+                # ----------------------------------------------
                 elif len(player_frames) < 9:
 
                     pad = torch.zeros_like(
@@ -532,19 +547,26 @@ class VolleyballDataset(Dataset):
                             pad.clone()
                         )
 
+                # ----------------------------------------------
                 # More than 9 frames
+                # ----------------------------------------------
                 elif len(player_frames) > 9:
 
                     player_frames = player_frames[:9]
 
+                # ----------------------------------------------
+                # Stack player's temporal sequence
+                # ----------------------------------------------
                 all_players[player_id] = torch.stack(
                     player_frames
                 )
 
             # --------------------------------------------------
             # Final shape:
+            #
             # (12, 9, C, H, W)
             # --------------------------------------------------
+
             all_players = torch.stack(
                 all_players
             )

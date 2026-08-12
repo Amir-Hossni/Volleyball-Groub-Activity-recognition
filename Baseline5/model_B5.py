@@ -105,40 +105,24 @@ class GroupTemporalClassifierB5(nn.Module):
 
     def forward(self, x):
 
-        # x:
-        # (B, P, T, C, H, W)
-
+        # x: (B, P, T, C, H, W)
         B, P, T, C, H, W = x.shape
 
         # Merge batch and player dimensions
-
         x = x.reshape(B * P, T, C, H, W)
 
-   
         # Stage-A temporal representation
-        
         with torch.no_grad():
+            player_features = self.person_model(x, return_features=True) # (B*P, 512)
 
-            player_features = self.person_model(x, return_features=True)
-
-        # player_features:
-        # (B*P, 512)
-
-     
+        
         # Restore player dimension
-       
-        player_features = player_features.reshape(B, P, -1 )
+        player_features = player_features.reshape(B, P, -1 ) # (B, 12, 512)
 
-        # player_features:
-        # (B, 12, 512)
-      
         # Max pooling over players
         team_features, _ = torch.max(player_features, dim=1) # (B, 512)
 
-
         output = self.classifier(team_features) # (B, 8)
-
-        
 
         return output
 
