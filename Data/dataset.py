@@ -421,24 +421,26 @@ class VolleyballDataset(Dataset):
                 "scene_label": sample["scene_label"],
             }
 
-        # B5 stageA / B7
+        
        
-        # B5 / B7
+        # B5 stageA / B7
         # Temporal player model
         elif self.mode == "person_temporal":
 
             player_tracks = sample["player_tracks"]
 
-            all_players = []
+            # --------------------------------------------------
+            # Prepare storage for 12 players
+            # Each player will contain 9 frames
+            # --------------------------------------------------
+            all_players = [[] for _ in range(12)]
             player_labels = []
 
+            # Get player labels
             for player_id in range(12):
 
                 track = player_tracks[player_id]
 
-                player_frames = []
-
-                # Get player label
                 if track:
                     player_label = track[0]["label_idx"]
                 else:
@@ -446,54 +448,107 @@ class VolleyballDataset(Dataset):
 
                 player_labels.append(player_label)
 
-                # Build 9-frame sequence for this player
-                for item in track:
+            # --------------------------------------------------
+            # Load each frame ONCE
+            # --------------------------------------------------
+            frame_ids = sorted(
+                {
+                    item["frame_id"]
+                    for player_id in range(12)
+                    for item in player_tracks[player_id]
+                }
+            )
 
-                    frame_id = item["frame_id"]
-                    box = item["box"]
+            for frame_id in frame_ids:
 
-                    image_path = sample["clip_path"] / f"{frame_id}.jpg"
+                image_path = sample["clip_path"] / f"{frame_id}.jpg"
 
-                    image = self._load_image(image_path)
-                    crop = self._crop_player(image, box)
+                # Load image only once
+                image = self._load_image(image_path)
 
-                    if self.transform:
-                        crop = self.transform(crop)
+                # --------------------------------------------------
+                # Crop all players from this frame
+                # --------------------------------------------------
+                for player_id in range(12):
 
-                    player_frames.append(crop)
+                    track = player_tracks[player_id]
 
-                # Padding missing player
+                    # Find this player's box for this frame
+                    box = None
+
+                    for item in track:
+                        if item["frame_id"] == frame_id:
+                            box = item["box"]
+                            break
+
+                    # Player exists in this frame
+                    if box is not None:
+
+                        crop = self._crop_player(
+                            image,
+                            box
+                        )
+
+                        if self.transform:
+                            crop = self.transform(crop)
+
+                        all_players[player_id].append(crop)
+
+            # --------------------------------------------------
+            # Ensure every player has exactly 9 frames
+            # --------------------------------------------------
+            for player_id in range(12):
+
+                player_frames = all_players[player_id]
+
+                # Missing player completely
                 if len(player_frames) == 0:
 
-                    if all_players:
-                        pad = torch.zeros_like(all_players[0][0])
+                    if all_players[0]:
+                        pad = torch.zeros_like(
+                            all_players[0][0]
+                        )
                     else:
-                        pad = torch.zeros(3, 224, 224)
+                        pad = torch.zeros(
+                            3,
+                            224,
+                            224
+                        )
 
-                    player_frames = [pad for _ in range(9)]
+                    player_frames = [
+                        pad.clone()
+                        for _ in range(9)
+                    ]
 
-                # Ensure exactly 9 frames
-                if len(player_frames) < 9:
+                # Less than 9 frames
+                elif len(player_frames) < 9:
 
-                    pad = torch.zeros_like(player_frames[0])
+                    pad = torch.zeros_like(
+                        player_frames[0]
+                    )
 
                     while len(player_frames) < 9:
-                        player_frames.append(pad.clone())
+                        player_frames.append(
+                            pad.clone()
+                        )
 
+                # More than 9 frames
                 elif len(player_frames) > 9:
 
                     player_frames = player_frames[:9]
 
-                # (9, C, H, W)
-                player_frames = torch.stack(player_frames)
+                all_players[player_id] = torch.stack(
+                    player_frames
+                )
 
-                # Add this player's temporal sequence
-                all_players.append(player_frames)
-
+            # --------------------------------------------------
+            # Final shape:
             # (12, 9, C, H, W)
-            all_players = torch.stack(all_players)
+            # --------------------------------------------------
+            all_players = torch.stack(
+                all_players
+            )
 
-            # (12,)
             player_labels = torch.tensor(
                 player_labels,
                 dtype=torch.long
