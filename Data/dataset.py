@@ -356,7 +356,7 @@ class VolleyballDataset(Dataset):
             }
             
         # B3 Stage 2
-
+        # B5 stage 2
         elif self.mode == "person_grouped":
             image = self._load_image(sample["frame_path"])
             boxes = sample["boxes"]
@@ -592,10 +592,7 @@ class VolleyballDataset(Dataset):
                     player_frames
                 )
 
-            # --------------------------------------------------
             # Final tensors
-            # --------------------------------------------------
-
             # (12, 9, C, H, W)
             all_players = torch.stack(
                 all_players

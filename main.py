@@ -19,6 +19,7 @@ from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Baseline4.model_B4 import TemporalImageClassifierB4
 from Baseline5.model_B5 import PersonTemporalB5
+from Baseline5.model_B5 import GroupTemporalClassifierB5
 
 # from Data.create_annot_pkl import create_pkl_version
 
@@ -80,7 +81,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_temporal",
+    mode="person_grouped",
     transform=transform
 )
 
@@ -91,7 +92,7 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_temporal",
+    mode="person_grouped",
     transform=transform
 )
 # # DataLoader
@@ -191,15 +192,30 @@ model_B4 = TemporalImageClassifierB4(
 
 #Basline5
 
-#stage1
+# stage1
 backboneB5 = backboneB3
-model = PersonTemporalB5(
+model_B5_stage1 = PersonTemporalB5(
     backbone=backboneB5,
     num_classes=9,
     lstm_hidden=512,
     lstm_layers=1,
     dropout=0.2
 )
+
+
+# stage2
+checkpoint = torch.load(
+    "/kaggle/working/best_Baseline5_stage1.pth",
+    map_location=device
+)
+
+model_B5_stage1.load_state_dict(
+    checkpoint["model_state_dict"]
+)
+
+
+model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
+
 
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
@@ -296,7 +312,7 @@ trainer_Baseline4 = Trainer(
     grad_clip=None,
 )
 
-trainer_Baseline5 = Trainer(
+trainer_Baseline5_S1 = Trainer(
     model=model,
     optimizer=optimizer,
     criterion=criterion,
@@ -315,9 +331,26 @@ trainer_Baseline5 = Trainer(
     use_amp=True,
     grad_clip=None,
 )
+
+
+
+trainer_Baseline5_S2 = Trainer(
+    model=model,
+    optimizer=optimizer,
+    criterion=criterion,
+    device=device,
+    adapter=identity_adapter,
+    num_classes=len(player_to_idx),
+    save_path="/kaggle/working/best_Baseline5_stage2.pth",
+    class_names=list(player_to_idx),
+    log_name="Baseline5_stage2",
+    epochs=50,
+    use_amp=True,
+    grad_clip=None,
+)
 if __name__ == "__main__":
     
-    trainer_Baseline5.fit(train_loader, val_loader)
+    trainer_Baseline5_S2.fit(train_loader, val_loader)
     
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
