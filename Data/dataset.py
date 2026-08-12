@@ -264,38 +264,48 @@ class VolleyballDataset(Dataset):
         frame_boxes,
         scene_label,
     ):
-        
-        """We keep every player's trajectory:
-            player0:
-              frame1 crop
-              frame2 crop
-              ...
-              frame9 crop
-            player1:
-              frame1 crop
-            Output later:
-            images [12,9,C,H,W] """
-            
-            
+        """
+        Keep every player's trajectory.
+
+        player_tracks:
+            {
+                player_id: {
+                    frame_id: {
+                        "box": box,
+                        "label_idx": label
+                    }
+                }
+            }
+
+        Output later:
+            images -> (12, 9, C, H, W)
+        """
+
         frame_ids = sorted(frame_boxes.keys())
 
-        # organize:player_id to player_id
-        player_tracks = {idx: [] for idx in range(12)}
+        # Each player has a dictionary:
+        # frame_id -> player information
+        player_tracks = {
+            player_id: {}
+            for player_id in range(12)
+        }
 
         for frame_id in frame_ids:
+
             boxes = frame_boxes[frame_id]
 
-            # keep player order
-            boxes = sorted(boxes, key=lambda x: x.player_ID)
+            # Keep player order
+            boxes = sorted(
+                boxes,
+                key=lambda x: x.player_ID
+            )
 
             for box in boxes:
-                player_tracks[box.player_ID].append(
-                    {
-                        "frame_id": frame_id,
-                        "box": box,
-                        "label_idx": self.player_to_idx[box.category]
-                    }
-            )
+
+                player_tracks[box.player_ID][frame_id] = {
+                    "box": box,
+                    "label_idx": self.player_to_idx[box.category]
+                }
 
         self.samples.append(
             {
@@ -423,83 +433,93 @@ class VolleyballDataset(Dataset):
 
         
        
-        # B5 stageA / B7
+        # B5_stage1 / B7
         # Temporal player model
         elif self.mode == "person_temporal":
 
             player_tracks = sample["player_tracks"]
 
+            # --------------------------------------------------
             # Prepare storage for 12 players
             # Each player will contain 9 frames
-            all_players = [[] for _ in range(12)]
+            # --------------------------------------------------
+
+            all_players = [
+                []
+                for _ in range(12)
+            ]
+
             player_labels = []
 
             # --------------------------------------------------
             # Get player labels
             # --------------------------------------------------
+
             for player_id in range(12):
 
                 track = player_tracks[player_id]
 
                 if track:
-                    player_label = track[0]["label_idx"]
+                    first_item = next(iter(track.values()))
+                    player_label = first_item["label_idx"]
                 else:
                     player_label = -1
 
                 player_labels.append(player_label)
 
             # --------------------------------------------------
-            # Load each frame ONCE
+            # Get all frame IDs
             # --------------------------------------------------
 
             frame_ids = sorted(
                 {
-                    item["frame_id"]
+                    frame_id
                     for player_id in range(12)
-                    for item in player_tracks[player_id]
+                    for frame_id in player_tracks[player_id]
                 }
             )
+
+            # --------------------------------------------------
+            # Load each frame ONLY ONCE
+            # --------------------------------------------------
 
             for frame_id in frame_ids:
 
                 image_path = (
-                    sample["clip_path"] / f"{frame_id}.jpg"
+                    sample["clip_path"]
+                    / f"{frame_id}.jpg"
                 )
 
-                # Load image only once
                 image = self._load_image(image_path)
 
                 # --------------------------------------------------
-                # Crop all players from this frame
+                # Crop players existing in this frame
                 # --------------------------------------------------
+
                 for player_id in range(12):
 
                     track = player_tracks[player_id]
 
-                    # Find this player's box for this frame
-                    box = None
+                    # Direct lookup instead of searching the track
+                    item = track.get(frame_id)
 
-                    for item in track:
+                    if item is None:
+                        continue
 
-                        if item["frame_id"] == frame_id:
-                            box = item["box"]
-                            break
+                    box = item["box"]
 
-                    # Player exists in this frame
-                    if box is not None:
+                    crop = self._crop_player(
+                        image,
+                        box
+                    )
 
-                        crop = self._crop_player(
-                            image,
-                            box
-                        )
+                    if self.transform:
+                        crop = self.transform(crop)
 
-                        if self.transform:
-                            crop = self.transform(crop)
-
-                        all_players[player_id].append(crop)
+                    all_players[player_id].append(crop)
 
             # --------------------------------------------------
-            # Find a reference tensor for padding
+            # Find reference tensor for padding
             # --------------------------------------------------
 
             reference_tensor = None
@@ -519,14 +539,21 @@ class VolleyballDataset(Dataset):
                 player_frames = all_players[player_id]
 
                 # ----------------------------------------------
-                # Missing player completely
+                # Player completely missing
                 # ----------------------------------------------
+
                 if len(player_frames) == 0:
 
                     if reference_tensor is not None:
-                        pad = torch.zeros_like(reference_tensor)
+                        pad = torch.zeros_like(
+                            reference_tensor
+                        )
                     else:
-                        pad = torch.zeros(3, 224, 224)
+                        pad = torch.zeros(
+                            3,
+                            224,
+                            224
+                        )
 
                     player_frames = [
                         pad.clone()
@@ -534,8 +561,9 @@ class VolleyballDataset(Dataset):
                     ]
 
                 # ----------------------------------------------
-                # Less than 9 frames
+                # Player has fewer than 9 frames
                 # ----------------------------------------------
+
                 elif len(player_frames) < 9:
 
                     pad = torch.zeros_like(
@@ -543,13 +571,15 @@ class VolleyballDataset(Dataset):
                     )
 
                     while len(player_frames) < 9:
+
                         player_frames.append(
                             pad.clone()
                         )
 
                 # ----------------------------------------------
-                # More than 9 frames
+                # Player has more than 9 frames
                 # ----------------------------------------------
+
                 elif len(player_frames) > 9:
 
                     player_frames = player_frames[:9]
@@ -557,20 +587,21 @@ class VolleyballDataset(Dataset):
                 # ----------------------------------------------
                 # Stack player's temporal sequence
                 # ----------------------------------------------
+
                 all_players[player_id] = torch.stack(
                     player_frames
                 )
 
             # --------------------------------------------------
-            # Final shape:
-            #
-            # (12, 9, C, H, W)
+            # Final tensors
             # --------------------------------------------------
 
+            # (12, 9, C, H, W)
             all_players = torch.stack(
                 all_players
             )
 
+            # (12,)
             player_labels = torch.tensor(
                 player_labels,
                 dtype=torch.long
@@ -581,7 +612,6 @@ class VolleyballDataset(Dataset):
                 "player_labels": player_labels,
                 "scene_label": sample["scene_label"],
             }
-
 
 
 
