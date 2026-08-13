@@ -32,6 +32,7 @@ class Trainer:
         early_stop_patience=10,
         use_amp=True,
         grad_clip=None,
+        scheduler=None
     ):
         # Accept "cuda" / "cuda:0" strings as well as torch.device
         self.device = torch.device(device) if isinstance(device, str) else device
@@ -41,6 +42,7 @@ class Trainer:
         self.model = model.to(self.device)
 
         self.optimizer = optimizer
+        self.scheduler = scheduler
         self.criterion = criterion.to(self.device) if hasattr(criterion, "to") else criterion
 
         self.adapter = adapter
@@ -308,6 +310,9 @@ class Trainer:
                     early_stopped=early_stopped,
                 )
 
+                if self.scheduler is not None:
+                    self.scheduler.step()
+                
                 if early_stopped:
                     break
 

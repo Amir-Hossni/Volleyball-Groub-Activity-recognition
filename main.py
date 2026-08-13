@@ -12,6 +12,7 @@ from Data.preprocessing import prepare_model
 
 
 from engine.trainer import Trainer
+from engine.sampler import create_weighted_sampler
 from engine.adapters import flatten_person_batch, identity_adapter
 
 from Baseline1.model_B1 import SceneClassifierB1
@@ -53,26 +54,6 @@ val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 transform = prepare_model(image_level=False)
 
 
-# Dataset_old
-# train_dataset = VolleyballDataset(
-#     videos_path=videos_path,
-#     pkl_path=pkl_path,
-#     split_ids=train_ids,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     mode="person_grouped",
-#     transform=transform
-# )
-
-# val_dataset = VolleyballDataset(
-#     videos_path=videos_path,
-#     pkl_path=pkl_path,
-#     split_ids=val_ids,
-#     scene_to_idx=scene_to_idx,
-#     player_to_idx=player_to_idx,
-#     mode="person_grouped",
-#     transform=transform
-# )
 
 ##datset_new_ver
 train_dataset = VolleyballDataset(
@@ -81,7 +62,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_grouped",
+    mode="person_temporal",
     transform=transform
 )
 
@@ -92,14 +73,21 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_grouped",
+    mode="person_temporal",
     transform=transform
 )
+
+# #sampler
+# train_sampler = create_weighted_sampler(
+#     train_dataset,
+#     target_key="scene_label"
+# )
+
+
 # # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
     batch_size=16,
-    shuffle=True,
     num_workers=4,
     pin_memory=True,
     persistent_workers=True,
@@ -232,11 +220,15 @@ criterion = torch.nn.CrossEntropyLoss(
 # Optimizer
 optimizer = torch.optim.AdamW(
     model.parameters(),
-    lr=1e-4,
+    lr=3e-4,
     weight_decay=1e-4
 )
 
-
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    optimizer,
+    T_max=50,
+    eta_min=1e-6
+)
 
 
 
@@ -347,6 +339,7 @@ trainer_Baseline5_S2 = Trainer(
     epochs=50,
     use_amp=True,
     grad_clip=None,
+    scheduler=scheduler
 )
 if __name__ == "__main__":
     

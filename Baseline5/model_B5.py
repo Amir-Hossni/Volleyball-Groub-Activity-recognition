@@ -113,66 +113,27 @@ class GroupTemporalClassifierB5(nn.Module):
 
         return self
     
+    
     def forward(self, x):
 
-        # x:
-        # (B, P, C, H, W)
-        B, P, C, H, W = x.shape
-
-        # Add temporal dimension
-        # (B, P, C, H, W)
-        #       ↓
-        # (B, P, 1, C, H, W)
-        x = x.unsqueeze(2)
+        # x: (B, P, T, C, H, W)
+        B, P, T, C, H, W = x.shape
 
         # Merge batch and player dimensions
-        # (B, P, 1, C, H, W)
-        #       ↓
-        # (B*P, 1, C, H, W)
-        x = x.reshape(B * P, 1, C, H, W)
+        x = x.reshape(B * P, T, C, H, W)
 
         # Stage-A temporal representation
-        player_features = self.person_model(
-            x,
-            return_features=True
-        )  # (B*P, 512)
-
-        # Restore player dimension
-        player_features = player_features.reshape(
-            B, P, -1
-        )  # (B, 12, 512)
-
-        # Max pooling over players
-        team_features, _ = torch.max(
-            player_features,
-            dim=1
-        )  # (B, 512)
-
-        # Stage-B classifier
-        output = self.classifier(team_features)
-
-        return output
-    
-    # def forward(self, x):
-
-    #     # x: (B, P, T, C, H, W)
-    #     B, P, T, C, H, W = x.shape
-
-    #     # Merge batch and player dimensions
-    #     x = x.reshape(B * P, T, C, H, W)
-
-    #     # Stage-A temporal representation
-    #     with torch.no_grad():
-    #         player_features = self.person_model(x, return_features=True) # (B*P, 512)
+        with torch.no_grad():
+            player_features = self.person_model(x, return_features=True) # (B*P, 512)
 
         
-    #     # Restore player dimension
-    #     player_features = player_features.reshape(B, P, -1 ) # (B, 12, 512)
+        # Restore player dimension
+        player_features = player_features.reshape(B, P, -1 ) # (B, 12, 512)
 
-    #     # Max pooling over players
-    #     team_features, _ = torch.max(player_features, dim=1) # (B, 512)
+        # Max pooling over players
+        team_features, _ = torch.max(player_features, dim=1) # (B, 512)
 
-    #     output = self.classifier(team_features) # (B, 8)
+        output = self.classifier(team_features) # (B, 8)
 
-    #     return output
+        return output
 
