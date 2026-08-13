@@ -28,7 +28,7 @@ class PersonTemporalB5(nn.Module):
         for param in self.backbone.parameters():
             param.requires_grad = False
 
-        self.num_players = num_classes
+        
         self.lstm = nn.LSTM(
                     input_size=self.feature_dim,   # 2048
                     hidden_size=lstm_hidden, # 512
@@ -103,6 +103,16 @@ class GroupTemporalClassifierB5(nn.Module):
             nn.Linear(2048, num_classes)
         )
 
+    def train(self, mode=True):
+        # Train Stage-B classifier
+        super().train(mode)
+
+        # Keep the frozen Stage-A model in evaluation mode
+        # so BatchNorm running statistics do not change.
+        self.person_model.eval()
+
+        return self
+    
     def forward(self, x):
 
         # x: (B, P, T, C, H, W)
