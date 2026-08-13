@@ -439,12 +439,31 @@ class VolleyballDataset(Dataset):
             player_tracks = sample["player_tracks"]
 
             # --------------------------------------------------
-            # Prepare storage for 12 players
-            # Each player will contain 9 frames
+            # Fixed temporal order
             # --------------------------------------------------
+            frame_ids = sorted(
+                {
+                    frame_id
+                    for player_id in range(12)
+                    for frame_id in player_tracks[player_id]
+                }
+            )
 
+            # We expect 9 temporal steps
+            frame_ids = frame_ids[:9]
+
+            # --------------------------------------------------
+            # Prepare storage
+            #
+            # all_players[player_id][time_step]
+            #
+            # This guarantees:
+            # player 0 -> same player across all frames
+            # player 1 -> same player across all frames
+            # ...
+            # --------------------------------------------------
             all_players = [
-                []
+                [None] * len(frame_ids)
                 for _ in range(12)
             ]
 
@@ -453,7 +472,6 @@ class VolleyballDataset(Dataset):
             # --------------------------------------------------
             # Get player labels
             # --------------------------------------------------
-
             for player_id in range(12):
 
                 track = player_tracks[player_id]
@@ -467,22 +485,11 @@ class VolleyballDataset(Dataset):
                 player_labels.append(player_label)
 
             # --------------------------------------------------
-            # Get all frame IDs
-            # --------------------------------------------------
-
-            frame_ids = sorted(
-                {
-                    frame_id
-                    for player_id in range(12)
-                    for frame_id in player_tracks[player_id]
-                }
-            )
-
-            # --------------------------------------------------
             # Load each frame ONLY ONCE
             # --------------------------------------------------
+            reference_tensor = None
 
-            for frame_id in frame_ids:
+            for time_idx, frame_id in enumerate(frame_ids):
 
                 image_path = (
                     sample["clip_path"]
@@ -494,110 +501,78 @@ class VolleyballDataset(Dataset):
                 # --------------------------------------------------
                 # Crop players existing in this frame
                 # --------------------------------------------------
-
                 for player_id in range(12):
 
                     track = player_tracks[player_id]
 
-                    # Direct lookup instead of searching the track
                     item = track.get(frame_id)
 
-                    if item is None:
-                        continue
+                    if item is not None:
 
-                    box = item["box"]
+                        crop = self._crop_player(
+                            image,
+                            item["box"]
+                        )
 
-                    crop = self._crop_player(
-                        image,
-                        box
-                    )
+                        if self.transform:
+                            crop = self.transform(crop)
 
-                    if self.transform:
-                        crop = self.transform(crop)
+                        all_players[player_id][time_idx] = crop
 
-                    all_players[player_id].append(crop)
-
-            # --------------------------------------------------
-            # Find reference tensor for padding
-            # --------------------------------------------------
-
-            reference_tensor = None
-
-            for player_frames in all_players:
-
-                if player_frames:
-                    reference_tensor = player_frames[0]
-                    break
+                        # First real crop becomes padding reference
+                        if reference_tensor is None:
+                            reference_tensor = crop
 
             # --------------------------------------------------
-            # Ensure every player has exactly 9 frames
+            # Padding
+            #
+            # Missing player/frame gets padding EXACTLY
+            # at its original temporal position.
             # --------------------------------------------------
+
+            if reference_tensor is None:
+
+                reference_tensor = torch.zeros(
+                    3,
+                    224,
+                    224
+                )
 
             for player_id in range(12):
 
-                player_frames = all_players[player_id]
+                for time_idx in range(len(frame_ids)):
 
-                # ----------------------------------------------
-                # Player completely missing
-                # ----------------------------------------------
+                    if all_players[player_id][time_idx] is None:
 
-                if len(player_frames) == 0:
-
-                    if reference_tensor is not None:
-                        pad = torch.zeros_like(
-                            reference_tensor
-                        )
-                    else:
-                        pad = torch.zeros(
-                            3,
-                            224,
-                            224
+                        all_players[player_id][time_idx] = (
+                            torch.zeros_like(reference_tensor)
                         )
 
-                    player_frames = [
-                        pad.clone()
-                        for _ in range(9)
-                    ]
-
-                # ----------------------------------------------
-                # Player has fewer than 9 frames
-                # ----------------------------------------------
-
-                elif len(player_frames) < 9:
-
-                    pad = torch.zeros_like(
-                        player_frames[0]
-                    )
-
-                    while len(player_frames) < 9:
-
-                        player_frames.append(
-                            pad.clone()
-                        )
-
-                # ----------------------------------------------
-                # Player has more than 9 frames
-                # ----------------------------------------------
-
-                elif len(player_frames) > 9:
-
-                    player_frames = player_frames[:9]
-
-                # ----------------------------------------------
-                # Stack player's temporal sequence
-                # ----------------------------------------------
+            # --------------------------------------------------
+            # Stack each player's temporal sequence
+            #
+            # (9, C, H, W)
+            # --------------------------------------------------
+            for player_id in range(12):
 
                 all_players[player_id] = torch.stack(
-                    player_frames
+                    all_players[player_id]
                 )
 
-            # Final tensors
+            # --------------------------------------------------
+            # Stack players
+            #
             # (12, 9, C, H, W)
+            # --------------------------------------------------
             all_players = torch.stack(
                 all_players
             )
 
+            # --------------------------------------------------
+            # Player labels
+            #
             # (12,)
+            # --------------------------------------------------
             player_labels = torch.tensor(
                 player_labels,
                 dtype=torch.long
@@ -608,7 +583,6 @@ class VolleyballDataset(Dataset):
                 "player_labels": player_labels,
                 "scene_label": sample["scene_label"],
             }
-
 
 
 # B1  -> single_frame
