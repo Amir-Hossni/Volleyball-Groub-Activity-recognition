@@ -19,8 +19,7 @@ from Baseline1.model_B1 import SceneClassifierB1
 from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Baseline4.model_B4 import TemporalImageClassifierB4
-from Baseline5.model_B5 import PersonTemporalB5
-from Baseline5.model_B5 import GroupTemporalClassifierB5
+from Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5 , GroupTemporalClassifierB5V2
 
 # from Data.create_annot_pkl import create_pkl_version
 
@@ -201,8 +200,16 @@ model_B5_stage1.load_state_dict(
     checkpoint["model_state_dict"]
 )
 
+backboneB5 = model_B5_stage1.backbone
+lstmB5 = model_B5_stage1.lstm
 
-model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
+model = GroupTemporalClassifierB5V2(
+    backbone=backboneB5,
+    lstm=lstmB5,
+    num_classes=8,
+)
+
+# model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
 
 
 if torch.cuda.device_count() > 1:
@@ -343,32 +350,32 @@ trainer_Baseline5_S2 = Trainer(
 )
 if __name__ == "__main__":
     
-    # trainer_Baseline5_S2.fit(train_loader, val_loader)
+    trainer_Baseline5_S2.fit(train_loader, val_loader)
     
     
-    # ============================
-    # DEBUG: Check player tracks
-    # ============================
+    # # ============================
+    # # DEBUG: Check player tracks
+    # # ============================
 
-    sample = train_dataset.samples[0]
+    # sample = train_dataset.samples[0]
 
-    player_tracks = sample["player_tracks"]
+    # player_tracks = sample["player_tracks"]
 
-    frame_id = sorted(player_tracks[0].keys())[0]
+    # frame_id = sorted(player_tracks[0].keys())[0]
 
-    print("\n===== BOX DEBUG =====")
-    print(f"Frame: {frame_id}")
+    # print("\n===== BOX DEBUG =====")
+    # print(f"Frame: {frame_id}")
 
-    for player_id in range(12):
-        box = player_tracks[player_id][frame_id]["box"]
+    # for player_id in range(12):
+    #     box = player_tracks[player_id][frame_id]["box"]
 
-        print(
-            f"Player {player_id}: "
-            f"ID={box.player_ID}, "
-            f"box={box.box}"
-        )
+    #     print(
+    #         f"Player {player_id}: "
+    #         f"ID={box.player_ID}, "
+    #         f"box={box.box}"
+    #     )
 
-    print("=====================\n")
+    # print("=====================\n")
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     
