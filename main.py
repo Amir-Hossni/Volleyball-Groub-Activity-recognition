@@ -62,7 +62,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_grouped",
+    mode="person_temporal",
     transform=transform
 )
 
@@ -73,7 +73,7 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_grouped",
+    mode="person_temporal",
     transform=transform
 )
 
@@ -343,8 +343,29 @@ trainer_Baseline5_S2 = Trainer(
 )
 if __name__ == "__main__":
     
-    trainer_Baseline5_S2.fit(train_loader, val_loader)
+    # trainer_Baseline5_S2.fit(train_loader, val_loader)
     
+    
+    # ============================
+    # DEBUG: Check player tracks
+    # ============================
+
+    sample = train_dataset.samples[0]
+
+    player_tracks = sample["player_tracks"]
+
+    print("\n===== TEMPORAL PLAYER DEBUG =====")
+
+    for player_id in range(12):
+        frames = sorted(player_tracks[player_id].keys())
+
+        print(
+            f"Player {player_id}: "
+            f"count={len(frames)}, "
+            f"frames={frames}"
+        )
+
+    print("=================================\n")
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     
