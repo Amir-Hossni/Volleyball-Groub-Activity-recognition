@@ -189,16 +189,16 @@ model_B5_stage1 = PersonTemporalB5(
     dropout=0.2
 )
 
-model = model_B5_stage1
-# stage2
-# checkpoint = torch.load(
-#     "/kaggle/working/best_Baseline5_stage1.pth",
-#     map_location=device
-# )
 
-# model_B5_stage1.load_state_dict(
-#     checkpoint["model_state_dict"]
-# )
+# stage2
+checkpoint = torch.load(
+    "/kaggle/working/best_Baseline5_stage1.pth",
+    map_location=device
+)
+
+model_B5_stage1.load_state_dict(
+    checkpoint["model_state_dict"]
+)
 
 # backboneB5 = model_B5_stage1.backbone
 # lstmB5 = model_B5_stage1.lstm
@@ -209,7 +209,7 @@ model = model_B5_stage1
 #     num_classes=8,
 # )
 
-# model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
+model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
 
 
 if torch.cuda.device_count() > 1:
@@ -351,7 +351,7 @@ trainer_Baseline5_S2 = Trainer(
 )
 if __name__ == "__main__":
     
-    trainer_Baseline5_S1.fit(train_loader, val_loader)
+    trainer_Baseline5_S2.fit(train_loader, val_loader)
     
     
     # # ============================

@@ -246,3 +246,30 @@ class GroupTemporalClassifierB5V2(nn.Module):
 
         # (B, 8)
         return output
+    
+    
+    
+    
+# Best model saved (Val Accuracy = 76.53%)
+# Confusion matrix saved to /kaggle/working/confusion_matrix_val.png
+# Epoch 2/50, Train Loss: 0.4809 Train Accuracy: 83.68% Validation Loss: 0.7564 Validation Accuracy: 75.80% Validation F1: 0.4958
+# =========================
+# Epoch 3/50, Train Loss: 0.4276 Train Accuracy: 85.36% Validation Loss: 0.7776 Validation Accuracy: 75.15% Validation F1: 0.4936
+# =========================
+# Epoch 4/50, Train Loss: 0.3909 Train Accuracy: 86.36% Validation Loss: 0.8045 Validation Accuracy: 74.49% Validation F1: 0.4962
+# =========================
+# Epoch 5/50, Train Loss: 0.3594 Train Accuracy: 87.29% Validation Loss: 0.8310 Validation Accuracy: 73.93% Validation F1: 0.4990
+# =========================
+# Epoch 6/50, Train Loss: 0.3318 Train Accuracy: 88.22% Validation Loss: 0.8592 Validation Accuracy: 73.76% Validation F1: 0.4974
+# =========================
+# Epoch 7/50, Train Loss: 0.3070 Train Accuracy: 89.06% Validation Loss: 0.8823 Validation Accuracy: 73.52% Validation F1: 0.5019
+# =========================
+# Epoch 8/50, Train Loss: 0.2788 Train Accuracy: 90.12% Validation Loss: 0.9247 Validation Accuracy: 73.33% Validation F1: 0.4919
+# =========================
+# Epoch 9/50, Train Loss: 0.2523 Train Accuracy: 91.10% Validation Loss: 0.9600 Validation Accuracy: 73.02% Validation F1: 0.4957
+# =========================
+# Epoch 10/50, Train Loss: 0.2249 Train Accuracy: 92.21% Validation Loss: 1.0227 Validation Accuracy: 71.71% Validation F1: 0.4865
+# =========================
+# Epoch 11/50, Train Loss: 0.1966 Train Accuracy: 93.20% Validation Loss: 1.0940 Validation Accuracy: 71.34% Validation F1: 0.4885
+# =========================
+# Early stopping triggered    
