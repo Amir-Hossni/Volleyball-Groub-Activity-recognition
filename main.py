@@ -189,25 +189,25 @@ model_B5_stage1 = PersonTemporalB5(
     dropout=0.2
 )
 
-
+model = model_B5_stage1
 # stage2
-checkpoint = torch.load(
-    "/kaggle/working/best_Baseline5_stage1.pth",
-    map_location=device
-)
+# checkpoint = torch.load(
+#     "/kaggle/working/best_Baseline5_stage1.pth",
+#     map_location=device
+# )
 
-model_B5_stage1.load_state_dict(
-    checkpoint["model_state_dict"]
-)
+# model_B5_stage1.load_state_dict(
+#     checkpoint["model_state_dict"]
+# )
 
-backboneB5 = model_B5_stage1.backbone
-lstmB5 = model_B5_stage1.lstm
+# backboneB5 = model_B5_stage1.backbone
+# lstmB5 = model_B5_stage1.lstm
 
-model = GroupTemporalClassifierB5V2(
-    backbone=backboneB5,
-    lstm=lstmB5,
-    num_classes=8,
-)
+# model = GroupTemporalClassifierB5V2(
+#     backbone=backboneB5,
+#     lstm=lstmB5,
+#     num_classes=8,
+# )
 
 # model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
 
@@ -328,7 +328,8 @@ trainer_Baseline5_S1 = Trainer(
     log_name="Baseline5_stage1",
     epochs=50,
     use_amp=True,
-    grad_clip=None,
+    grad_clip=1.0,
+    scheduler=scheduler
 )
 
 
@@ -345,12 +346,12 @@ trainer_Baseline5_S2 = Trainer(
     log_name="Baseline5_stage2",
     epochs=50,
     use_amp=True,
-    grad_clip=None,
+    grad_clip=1.0,
     scheduler=scheduler
 )
 if __name__ == "__main__":
     
-    trainer_Baseline5_S2.fit(train_loader, val_loader)
+    trainer_Baseline5_S1.fit(train_loader, val_loader)
     
     
     # # ============================
