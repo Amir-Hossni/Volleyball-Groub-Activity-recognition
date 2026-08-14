@@ -350,6 +350,10 @@ if __name__ == "__main__":
     # DEBUG: Check player tracks
     # ============================
 
+    sample = train_dataset.samples[0]
+
+    player_tracks = sample["player_tracks"]
+
     frame_id = sorted(player_tracks[0].keys())[0]
 
     print("\n===== BOX DEBUG =====")
