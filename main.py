@@ -350,22 +350,21 @@ if __name__ == "__main__":
     # DEBUG: Check player tracks
     # ============================
 
-    sample = train_dataset.samples[0]
+    frame_id = sorted(player_tracks[0].keys())[0]
 
-    player_tracks = sample["player_tracks"]
-
-    print("\n===== TEMPORAL PLAYER DEBUG =====")
+    print("\n===== BOX DEBUG =====")
+    print(f"Frame: {frame_id}")
 
     for player_id in range(12):
-        frames = sorted(player_tracks[player_id].keys())
+        box = player_tracks[player_id][frame_id]["box"]
 
         print(
             f"Player {player_id}: "
-            f"count={len(frames)}, "
-            f"frames={frames}"
+            f"ID={box.player_ID}, "
+            f"box={box.box}"
         )
 
-    print("=================================\n")
+    print("=====================\n")
     # create_pkl_version(videos_root=videos_path,annot_root=annot_root,save_path= "/kaggle/working/annot_all.pkl")
     
     
