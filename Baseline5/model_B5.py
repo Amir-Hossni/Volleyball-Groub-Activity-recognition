@@ -1,139 +1,85 @@
 import torch
 import torch.nn as nn
-from torchvision import models
-
-
 
 
 class PersonTemporalB5(nn.Module):
+    """Stage-A: per-player temporal action classifier.
+
+    Frozen CNN backbone (feature extractor) -> LSTM over time -> linear head.
+    """
 
     def __init__(
-            self,
-            backbone,
-            num_classes=9,
-            lstm_hidden=512,
-            lstm_layers=1,
-            dropout=0.2
-        ):
-        
+        self,
+        backbone,
+        num_classes=9,
+        lstm_hidden=512,
+        lstm_layers=1,
+        dropout=0.2,
+    ):
         super().__init__()
 
-        # B3 Stage-A backbone
+        # Stage-A backbone (frozen feature extractor, e.g. ResNet-50)
         self.backbone = backbone
-        # Remove B3's classification head
         self.backbone.fc = nn.Identity()
         self.feature_dim = 2048
-        
-        #freeze backbone
+
+        # Freeze backbone weights...
         for param in self.backbone.parameters():
             param.requires_grad = False
+        # ...and make sure it starts in eval mode so BatchNorm running
+        # stats don't drift, and dropout (if any) is disabled.
+        self.backbone.eval()
 
-        
         self.lstm = nn.LSTM(
-                    input_size=self.feature_dim,   # 2048
-                    hidden_size=lstm_hidden, # 512
-                    num_layers=lstm_layers,
-                    batch_first=True,
-                    dropout=dropout if lstm_layers > 1 else 0.0
-                )
+            input_size=self.feature_dim,   # 2048
+            hidden_size=lstm_hidden,       # 512
+            num_layers=lstm_layers,
+            batch_first=True,
+            dropout=dropout if lstm_layers > 1 else 0.0,
+        )
         self.classifier = nn.Linear(lstm_hidden, num_classes)
 
+    def train(self, mode=True):
+        super().train(mode)
+        # Keep the frozen backbone in eval mode no matter what mode
+        # the parent model is switched to.
+        self.backbone.eval()
+        return self
 
-    def forward(self,x, return_features=False):
-
-        # x:
-        # (B, T, C, H, W)
-
-        B,T,C,H,W = x.shape
+    def forward(self, x, return_features=False):
+        # x: (B, T, C, H, W)
+        B, T, C, H, W = x.shape
 
         # merge time with batch
         x = x.view(B * T, C, H, W)
-        
+
         # CNN is frozen
         with torch.no_grad():
             features = self.backbone(x)
-
-        # feats:
-        # (B*T,2048)
+        # features: (B*T, 2048)
 
         # restore time dimension
         features = features.view(B, T, self.feature_dim)
-        
+
         # LSTM
         lstm_out, (h_n, c_n) = self.lstm(features)
+        # last layer's hidden state
+        final_feature = h_n[-1]  # (B, 512)
 
-        # last layer hidden state
-        final_feature = h_n[-1]
-        
         if return_features:
             return final_feature
-        
-        # (B,512)
-        output = self.classifier(final_feature)
 
+        output = self.classifier(final_feature)  # (B, num_classes)
         return output
-    
-
-# class GroupTemporalClassifierB5(nn.Module):
-
-#     def __init__(
-#         self,
-#         person_model,
-#         num_classes=8,
-#         hidden_dim=4096,
-#         dropout=0.2
-#     ):
-#         super().__init__()
-
-#         # Stage-A temporal person model
-#         self.person_model = person_model
-
-#         # Freeze Stage-A completely
-#         for param in self.person_model.parameters():
-#             param.requires_grad = False
-
-        
-#         # Same classifier idea as B3
-#         self.classifier = nn.Sequential(
-#             nn.Dropout(dropout),
-#             nn.Linear(512, hidden_dim),
-#             nn.ReLU(),
-#             nn.Dropout(dropout),
-#             nn.Linear(hidden_dim, 2048),
-#             nn.ReLU(),
-#             nn.Linear(2048, num_classes)
-#         )
-    
-    
-    
-#     def forward(self, x):
-
-#         # x: (B, P, T, C, H, W)
-#         B, P, T, C, H, W = x.shape
-
-#         # Merge batch and player dimensions
-#         x = x.reshape(B * P, T, C, H, W)
-
-#         # Stage 1 inference
-#         self.person_model.eval()
-        
-#         # Stage-A temporal representation
-#         with torch.no_grad():
-#             player_features = self.person_model(x, return_features=True) # (B*P, 512)
-
-        
-#         # Restore player dimension
-#         player_features = player_features.reshape(B, P, -1 ) # (B, 12, 512)
-
-#         # Max pooling over players
-#         team_features, _ = torch.max(player_features, dim=1) # (B, 512)
-
-#         output = self.classifier(team_features) # (B, 8)
-
-#         return output
 
 
 class GroupTemporalClassifierB5(nn.Module):
+    """Stage-B: team-level classifier via concatenation of per-player features.
+
+    Wraps a frozen Stage-A PersonTemporalB5, extracts per-player temporal
+    features, concatenates them across players, and classifies the group
+    activity.
+    """
 
     def __init__(
         self,
@@ -142,22 +88,20 @@ class GroupTemporalClassifierB5(nn.Module):
         num_players=12,
         player_feature_dim=512,
         hidden_dim=4096,
-        dropout=0.2
+        dropout=0.2,
     ):
         super().__init__()
 
-        # Stage-A temporal person model
+        # Stage-A temporal person model (frozen)
         self.person_model = person_model
-
         self.num_players = num_players
         self.player_feature_dim = player_feature_dim
 
-        # Freeze Stage-A completely
         for param in self.person_model.parameters():
             param.requires_grad = False
+        self.person_model.eval()
 
-        # Concatenation:
-        # (B, 12, 512) -> (B, 6144)
+        # Concatenation: (B, num_players, player_feature_dim) -> (B, input_dim)
         input_dim = num_players * player_feature_dim
 
         # Stage-B classifier
@@ -165,61 +109,47 @@ class GroupTemporalClassifierB5(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, 2048),
             nn.ReLU(),
-
-            nn.Linear(2048, num_classes)
+            nn.Linear(2048, num_classes),
         )
+
+    def train(self, mode=True):
+        super().train(mode)
+        # Keep frozen Stage-A (and, transitively, its backbone) in eval mode.
+        self.person_model.eval()
+        return self
 
     def forward(self, x):
-
-        # x:
-        # (B, P, T, C, H, W)
-
+        # x: (B, P, T, C, H, W)
         B, P, T, C, H, W = x.shape
 
-        # Merge batch + players
-        # (B, P, T, C, H, W)
-        #        ↓
-        # (B*P, T, C, H, W)
+        # merge batch + players
         x = x.reshape(B * P, T, C, H, W)
 
-        # Stage-1 inference
-        self.person_model.eval()
-
-        # Stage-A temporal representation
+        # Stage-A inference (frozen)
         with torch.no_grad():
-            player_features = self.person_model(
-                x,
-                return_features=True
-            )
-            # (B*P, 512)
+            player_features = self.person_model(x, return_features=True)
+            # (B*P, player_feature_dim)
 
-        # Restore player dimension
-        player_features = player_features.reshape(
-            B,
-            P,
-            self.player_feature_dim
-        )
-        # (B, 12, 512)
+        # restore player dimension
+        player_features = player_features.reshape(B, P, self.player_feature_dim)
+        # (B, num_players, player_feature_dim)
 
-        # Concatenate all player representations
-        team_features = player_features.reshape(
-            B,
-            P * self.player_feature_dim
-        )
-        # (B, 6144)
+        # concatenate all player representations
+        team_features = player_features.reshape(B, P * self.player_feature_dim)
+        # (B, num_players * player_feature_dim)
 
-        # Stage-B classifier
-        output = self.classifier(team_features)
-        # (B, 8)
-
+        output = self.classifier(team_features)  # (B, num_classes)
         return output
-    
-    
+
+
 class GroupTemporalClassifierB5V2(nn.Module):
+    """Stage-B (v2): team-level classifier built directly from a frozen
+    backbone + LSTM (rather than wrapping a PersonTemporalB5 instance),
+    with max-pooling aggregation across players.
+    """
 
     def __init__(
         self,
@@ -227,105 +157,65 @@ class GroupTemporalClassifierB5V2(nn.Module):
         lstm,
         num_classes=8,
         hidden_dim=4096,
-        dropout=0.2
+        dropout=0.2,
     ):
         super().__init__()
 
-        # B5 Stage-1 components
+        # Stage-A components (frozen)
         self.backbone = backbone
         self.lstm = lstm
-
-        # Remove ResNet classification head
         self.backbone.fc = nn.Identity()
 
-        # Freeze Stage-1
         for param in self.backbone.parameters():
             param.requires_grad = False
-
         for param in self.lstm.parameters():
             param.requires_grad = False
 
-        # Stage-2 classifier
+        # Stage-B classifier
         self.classifier = nn.Sequential(
             nn.Dropout(dropout),
             nn.Linear(512, hidden_dim),
             nn.ReLU(),
-
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, 2048),
             nn.ReLU(),
-
-            nn.Linear(2048, num_classes)
+            nn.Linear(2048, num_classes),
         )
 
     def train(self, mode=True):
-
         super().train(mode)
-
-        # Keep frozen Stage-1 in evaluation mode
+        # Keep frozen Stage-A in evaluation mode
         self.backbone.eval()
         self.lstm.eval()
-
         return self
 
     def forward(self, x):
-
         # x: (B, P, T, C, H, W)
-
         B, P, T, C, H, W = x.shape
 
-        # (B*P, T, C, H, W)
-        x = x.reshape(B * P, T, C, H, W)
-
-        # (B*P*T, C, H, W)
+        # merge batch, players, and time all at once
         x = x.reshape(B * P * T, C, H, W)
 
-        # -----------------------------------------
         # Stage-1 CNN
-        # -----------------------------------------
-
         with torch.no_grad():
             features = self.backbone(x)
-
         # (B*P*T, 2048)
-        features = features.reshape(
-            B * P,
-            T,
-            2048
-        )
+        features = features.reshape(B * P, T, 2048)
 
-        # -----------------------------------------
         # Stage-1 LSTM
-        # -----------------------------------------
-
         with torch.no_grad():
             _, (h_n, _) = self.lstm(features)
+        player_features = h_n[-1]  # (B*P, 512)
 
-        # (B*P, 512)
-        player_features = h_n[-1]
+        # restore player dimension
+        player_features = player_features.reshape(B, P, 512)
 
-        # (B, P, 512)
-        player_features = player_features.reshape(
-            B,
-            P,
-            512
-        )
+        # max pooling over players
+        team_features, _ = torch.max(player_features, dim=1)  # (B, 512)
 
-        # -----------------------------------------
-        # Max pooling over players
-        # -----------------------------------------
-
-        team_features, _ = torch.max(
-            player_features,
-            dim=1
-        )
-
-        # (B, 512)
-        output = self.classifier(team_features)
-
-        # (B, 8)
+        output = self.classifier(team_features)  # (B, num_classes)
         return output
-    
+
     
     
     

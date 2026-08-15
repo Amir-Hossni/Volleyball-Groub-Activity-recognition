@@ -19,7 +19,7 @@ from Baseline1.model_B1 import SceneClassifierB1
 from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Baseline4.model_B4 import TemporalImageClassifierB4
-from Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5 , GroupTemporalClassifierB5V2
+from Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5 
 
 # from Data.create_annot_pkl import create_pkl_version
 
@@ -189,27 +189,21 @@ model_B5_stage1 = PersonTemporalB5(
     dropout=0.2
 )
 
+model = model_B5_stage1
 
 # stage2
-checkpoint = torch.load(
-    "/kaggle/working/best_Baseline5_stage1.pth",
-    map_location=device
-)
-
-model_B5_stage1.load_state_dict(
-    checkpoint["model_state_dict"]
-)
-
-# backboneB5 = model_B5_stage1.backbone
-# lstmB5 = model_B5_stage1.lstm
-
-# model = GroupTemporalClassifierB5V2(
-#     backbone=backboneB5,
-#     lstm=lstmB5,
-#     num_classes=8,
+# checkpoint = torch.load(
+#     "/kaggle/working/best_Baseline5_stage1.pth",
+#     map_location=device
 # )
 
-model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
+# model_B5_stage1.load_state_dict(
+#     checkpoint["model_state_dict"]
+# )
+
+
+
+# model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
 
 
 if torch.cuda.device_count() > 1:
@@ -351,7 +345,7 @@ trainer_Baseline5_S2 = Trainer(
 )
 if __name__ == "__main__":
     
-    trainer_Baseline5_S2.fit(train_loader, val_loader)
+    trainer_Baseline5_S1.fit(train_loader, val_loader)
     
     
     # # ============================
