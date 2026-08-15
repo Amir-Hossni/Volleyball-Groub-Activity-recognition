@@ -74,12 +74,73 @@ class PersonTemporalB5(nn.Module):
         return output
     
 
+# class GroupTemporalClassifierB5(nn.Module):
+
+#     def __init__(
+#         self,
+#         person_model,
+#         num_classes=8,
+#         hidden_dim=4096,
+#         dropout=0.2
+#     ):
+#         super().__init__()
+
+#         # Stage-A temporal person model
+#         self.person_model = person_model
+
+#         # Freeze Stage-A completely
+#         for param in self.person_model.parameters():
+#             param.requires_grad = False
+
+        
+#         # Same classifier idea as B3
+#         self.classifier = nn.Sequential(
+#             nn.Dropout(dropout),
+#             nn.Linear(512, hidden_dim),
+#             nn.ReLU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(hidden_dim, 2048),
+#             nn.ReLU(),
+#             nn.Linear(2048, num_classes)
+#         )
+    
+    
+    
+#     def forward(self, x):
+
+#         # x: (B, P, T, C, H, W)
+#         B, P, T, C, H, W = x.shape
+
+#         # Merge batch and player dimensions
+#         x = x.reshape(B * P, T, C, H, W)
+
+#         # Stage 1 inference
+#         self.person_model.eval()
+        
+#         # Stage-A temporal representation
+#         with torch.no_grad():
+#             player_features = self.person_model(x, return_features=True) # (B*P, 512)
+
+        
+#         # Restore player dimension
+#         player_features = player_features.reshape(B, P, -1 ) # (B, 12, 512)
+
+#         # Max pooling over players
+#         team_features, _ = torch.max(player_features, dim=1) # (B, 512)
+
+#         output = self.classifier(team_features) # (B, 8)
+
+#         return output
+
+
 class GroupTemporalClassifierB5(nn.Module):
 
     def __init__(
         self,
         person_model,
         num_classes=8,
+        num_players=12,
+        player_feature_dim=512,
         hidden_dim=4096,
         dropout=0.2
     ):
@@ -88,51 +149,76 @@ class GroupTemporalClassifierB5(nn.Module):
         # Stage-A temporal person model
         self.person_model = person_model
 
+        self.num_players = num_players
+        self.player_feature_dim = player_feature_dim
+
         # Freeze Stage-A completely
         for param in self.person_model.parameters():
             param.requires_grad = False
 
-        # Same classifier idea as B3
+        # Concatenation:
+        # (B, 12, 512) -> (B, 6144)
+        input_dim = num_players * player_feature_dim
+
+        # Stage-B classifier
         self.classifier = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(512, hidden_dim),
+            nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
+
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, 2048),
             nn.ReLU(),
+
             nn.Linear(2048, num_classes)
         )
-    
-    
-    
+
     def forward(self, x):
 
-        # x: (B, P, T, C, H, W)
+        # x:
+        # (B, P, T, C, H, W)
+
         B, P, T, C, H, W = x.shape
 
-        # Merge batch and player dimensions
+        # Merge batch + players
+        # (B, P, T, C, H, W)
+        #        ↓
+        # (B*P, T, C, H, W)
         x = x.reshape(B * P, T, C, H, W)
 
-        # Stage 1 inference
+        # Stage-1 inference
         self.person_model.eval()
-        
+
         # Stage-A temporal representation
         with torch.no_grad():
-            player_features = self.person_model(x, return_features=True) # (B*P, 512)
+            player_features = self.person_model(
+                x,
+                return_features=True
+            )
+            # (B*P, 512)
 
-        
         # Restore player dimension
-        player_features = player_features.reshape(B, P, -1 ) # (B, 12, 512)
+        player_features = player_features.reshape(
+            B,
+            P,
+            self.player_feature_dim
+        )
+        # (B, 12, 512)
 
-        # Max pooling over players
-        team_features, _ = torch.max(player_features, dim=1) # (B, 512)
+        # Concatenate all player representations
+        team_features = player_features.reshape(
+            B,
+            P * self.player_feature_dim
+        )
+        # (B, 6144)
 
-        output = self.classifier(team_features) # (B, 8)
+        # Stage-B classifier
+        output = self.classifier(team_features)
+        # (B, 8)
 
         return output
-
-
-
+    
+    
 class GroupTemporalClassifierB5V2(nn.Module):
 
     def __init__(
