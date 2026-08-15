@@ -102,16 +102,6 @@ class GroupTemporalClassifierB5(nn.Module):
             nn.ReLU(),
             nn.Linear(2048, num_classes)
         )
-
-    def train(self, mode=True):
-        # Train Stage-B classifier
-        super().train(mode)
-
-        # Keep the frozen Stage-A model in evaluation mode
-        # so BatchNorm running statistics do not change.
-        self.person_model.eval()
-
-        return self
     
     
     
@@ -123,6 +113,9 @@ class GroupTemporalClassifierB5(nn.Module):
         # Merge batch and player dimensions
         x = x.reshape(B * P, T, C, H, W)
 
+        # Stage 1 inference
+        self.person_model.eval()
+        
         # Stage-A temporal representation
         with torch.no_grad():
             player_features = self.person_model(x, return_features=True) # (B*P, 512)
