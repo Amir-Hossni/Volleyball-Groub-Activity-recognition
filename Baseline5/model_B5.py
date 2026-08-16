@@ -108,10 +108,12 @@ class GroupTemporalClassifierB5(nn.Module):
         self.classifier = nn.Sequential(
             nn.Dropout(dropout),
             nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(inplace=True),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, 2048),
-            nn.ReLU(),
+            nn.LayerNorm(2048),
+            nn.ReLU(inplace=True),
             nn.Linear(2048, num_classes),
         )
 
