@@ -87,8 +87,8 @@ class GroupTemporalClassifierB5(nn.Module):
         num_classes=8,
         num_players=12,
         player_feature_dim=512,
-        hidden_dim=4096,
-        dropout=0.2,
+        hidden_dim=2048,
+        dropout=0.3,
     ):
         super().__init__()
 
@@ -111,10 +111,10 @@ class GroupTemporalClassifierB5(nn.Module):
             nn.LayerNorm(hidden_dim),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, 2048),
-            nn.LayerNorm(2048),
+            nn.Linear(hidden_dim, 1024),
+            nn.LayerNorm(1024),
             nn.ReLU(inplace=True),
-            nn.Linear(2048, num_classes),
+            nn.Linear(1024, num_classes),
         )
 
     def train(self, mode=True):
