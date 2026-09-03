@@ -96,8 +96,17 @@ class Trainer:
         epoch_start = time.time()
 
         train_bar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.epochs} [train]", leave=False)
+        
         for batch in train_bar:
-            inputs, targets = self.adapter(batch)
+            adapter_output = self.adapter(batch)
+
+            
+            if len(adapter_output) == 3:
+                inputs, targets, player_mask = adapter_output
+                player_mask = player_mask.to(self.device, non_blocking=True)
+            else:
+                inputs, targets = adapter_output
+                player_mask = None
 
             inputs = inputs.to(self.device, non_blocking=True)
             targets = targets.to(self.device, non_blocking=True)
@@ -107,7 +116,11 @@ class Trainer:
 
             # Forward
             with self._autocast():
-                outputs = self.model(inputs)
+                if player_mask is not None:
+                    outputs = self.model(inputs, player_mask)
+                else:
+                    outputs = self.model(inputs)
+
                 loss = self.criterion(outputs, targets)
 
             # Backward
