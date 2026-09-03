@@ -46,16 +46,25 @@ def evaluate(
 
     for batch in loader:
 
-        inputs, targets = adapter(batch)
+        adapter_output = adapter(batch)
+        
+        if len(adapter_output) == 3:
+            inputs, targets, player_mask = adapter_output
+            player_mask = player_mask.to(device, non_blocking=True)
+        else:
+            inputs, targets = adapter_output
+            player_mask = None
 
         inputs = inputs.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
 
         with torch.amp.autocast(device_type=device.type, enabled=use_amp):
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            if player_mask is not None:
+                outputs = model(inputs, player_mask)
+            else:
+                outputs = model(inputs)
 
-        loss_val = loss.item()
+        loss_val = criterion(outputs, targets)
         total_loss += loss_val
 
         predictions = torch.argmax(outputs, dim=1)
