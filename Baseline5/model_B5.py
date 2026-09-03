@@ -86,7 +86,7 @@ class GroupTemporalClassifierB5(nn.Module):
         person_model,
         num_classes=8,
         num_players=12,
-        hidden_dim=512,
+        hidden_dim=2048,
         dropout=0.4,
     ):
         super().__init__()
@@ -101,8 +101,14 @@ class GroupTemporalClassifierB5(nn.Module):
         self.person_model.eval()
 
         # Concatenation: MAX + MEAN
-        input_dim = (2 * self.player_feature_dim)
+        # input_dim = (2 * self.player_feature_dim)
 
+        # Full Concatenation:
+        # 12 players × 512 features = 6144
+        
+        input_dim = self.num_players * self.player_feature_dim
+
+        
         # Stage-B classifier
         self.classifier = nn.Sequential(
             nn.Dropout(dropout),
@@ -142,48 +148,29 @@ class GroupTemporalClassifierB5(nn.Module):
         player_features = player_features.reshape(B, P, self.player_feature_dim) # (B, P, 512)
         
         # (B,P) -> (B,P,1)
-        mask_3d = player_mask.unsqueeze(-1)
-        
-        # MAX pooling across players
-        
-        masked_features = player_features.masked_fill(
-        ~mask_3d,
-        float("-inf")
-        )
-        
-        
-        pooled_max = masked_features.max(dim=1)[0] # (B, 512)
-        
-        pooled_max = torch.where(
-        torch.isinf(pooled_max),
-        torch.zeros_like(pooled_max),
-        pooled_max
+      
+        # Apply player mask
+        mask_3d = player_mask.unsqueeze(-1) # Convert to: (B, P, 1)
+
+        # Zero-out padded / invalid players
+        player_features = player_features.masked_fill(
+            ~mask_3d,
+            0.0
         )
 
-        # MEAN pooling across players
-        masked_features = player_features.masked_fill(
-                ~mask_3d,
-                0.0
-            )
-        
-        pooled_mean = masked_features.mean(dim=1) # (B, 512)
-        
-        
 
-        valid_players = (
-        player_mask.sum(dim=1)
-        .clamp_min(1)
-        .unsqueeze(-1)
-        .float()
+        # Full Concatenation
+        # (B, 12, 512)
+        #       ↓
+        # (B, 6144)
+        team_features = player_features.reshape(
+            B,
+            self.num_players * self.player_feature_dim
         )
-        
-        pooled_mean = (masked_features.sum(dim=1) / valid_players)  # (B,512)
-        
-        # concatenate MAX + MEAN
-        team_features = torch.cat([pooled_max, pooled_mean], dim=-1) # (B, 1024)
-        
-        output = self.classifier(team_features) # (B, 8)
-        
+
+        # Stage-B classifier
+        output = self.classifier(team_features)  # (B, 8)
+
 
         return output
 
