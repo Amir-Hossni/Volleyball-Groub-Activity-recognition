@@ -94,7 +94,7 @@ class GroupTemporalClassifierB5(nn.Module):
         # Stage-A temporal person model (frozen)
         self.person_model = person_model
         self.num_players = num_players
-        self.player_feature_dim = person_model.lstm_hidden
+        self.player_feature_dim = 512
 
         for param in self.person_model.parameters():
             param.requires_grad = False
