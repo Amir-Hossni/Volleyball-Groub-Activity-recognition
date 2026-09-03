@@ -87,7 +87,7 @@ class GroupTemporalClassifierB5(nn.Module):
         num_classes=8,
         num_players=12,
         hidden_dim=512,
-        dropout=0.3,
+        dropout=0.4,
     ):
         super().__init__()
 
@@ -109,10 +109,12 @@ class GroupTemporalClassifierB5(nn.Module):
             nn.Linear(input_dim, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU(inplace=True),
+            
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.LayerNorm(hidden_dim // 2),
             nn.ReLU(inplace=True),
+            
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, num_classes),
         )
@@ -123,13 +125,14 @@ class GroupTemporalClassifierB5(nn.Module):
         self.person_model.eval()
         return self
 
-    def forward(self, x):
+    def forward(self, x, player_mask):
         # x: (B, P, T, C, H, W)
         B, P, T, C, H, W = x.shape
 
         # merge batch + players
         x = x.reshape(B * P, T, C, H, W)
-
+        
+        
         # Stage-A inference (frozen)
         with torch.no_grad():
             player_features = self.person_model( x, return_features=True) # (B*P, 512)
@@ -138,19 +141,47 @@ class GroupTemporalClassifierB5(nn.Module):
         # restore player dimension
         player_features = player_features.reshape(B, P, self.player_feature_dim) # (B, P, 512)
         
-
-        # MAX pooling across players
-        pooled_max = player_features.max(dim=1)[0] # (B, 512)
+        # (B,P) -> (B,P,1)
+        mask_3d = player_mask.unsqueeze(-1)
         
+        # MAX pooling across players
+        
+        masked_features = player_features.masked_fill(
+        ~mask_3d,
+        float("-inf")
+        )
+        
+        
+        pooled_max = masked_features.max(dim=1)[0] # (B, 512)
+        
+        pooled_max = torch.where(
+        torch.isinf(pooled_max),
+        torch.zeros_like(pooled_max),
+        pooled_max
+        )
 
         # MEAN pooling across players
-        pooled_mean = player_features.mean(dim=1) # (B, 512)
+        masked_features = player_features.masked_fill(
+                ~mask_3d,
+                0.0
+            )
+        
+        pooled_mean = masked_features.mean(dim=1) # (B, 512)
+        
         
 
+        valid_players = (
+        player_mask.sum(dim=1)
+        .clamp_min(1)
+        .unsqueeze(-1)
+        .float()
+        )
+        
+        pooled_mean = (masked_features.sum(dim=1) / valid_players)  # (B,512)
+        
         # concatenate MAX + MEAN
         team_features = torch.cat([pooled_max, pooled_mean], dim=-1) # (B, 1024)
         
-
         output = self.classifier(team_features) # (B, 8)
         
 

@@ -2,7 +2,7 @@ import torch
 
 
 
-def identity_adapter(batch, input_key="images", target_key="scene_label"):
+def identity_adapter(batch, input_key="images", target_key="scene_label", mask=None):
     """
     Default adapter.
 
@@ -13,6 +13,11 @@ def identity_adapter(batch, input_key="images", target_key="scene_label"):
 
     inputs = batch[input_key]
     targets = batch[target_key]
+
+    if mask is not None:
+        player_mask = inputs.abs().sum(dim=(2, 3, 4, 5)) > 0
+
+        return inputs, targets, player_mask
 
     return inputs, targets
 

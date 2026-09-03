@@ -333,7 +333,12 @@ trainer_Baseline5_S2 = Trainer(
     optimizer=optimizer,
     criterion=criterion,
     device=device,
-    adapter=identity_adapter,
+    adapter=lambda batch: identity_adapter(
+        batch,
+        input_key="images",
+        target_key="scene_label",
+        mask="player_mask"
+    ),
     num_classes=len(player_to_idx),
     save_path="/kaggle/working/best_Baseline5_stage2.pth",
     class_names=list(player_to_idx),
