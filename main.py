@@ -19,7 +19,7 @@ from Baseline1.model_B1 import SceneClassifierB1
 from Baseline2.model_B2 import B2Model
 from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Baseline4.model_B4 import TemporalImageClassifierB4
-from Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5 
+from Baseline5.model_B5 import GroupTemporalClassifierB5 , GroupTemporalClassifierB5V2, PersonTemporalB5 
 
 # from Data.create_annot_pkl import create_pkl_version
 
@@ -201,8 +201,8 @@ model_B5_stage1.load_state_dict(
     checkpoint["model_state_dict"]
 )
 
-model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
-# model = B5_StageAFeatureLinearProbe(person_model=model_B5_stage1, num_classes=8)
+# model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
+model = GroupTemporalClassifierB5V2(person_model=model_B5_stage1, num_classes=8)
 
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
@@ -349,44 +349,10 @@ trainer_Baseline5_S2 = Trainer(
 
 
 
-# Debug_Baseline5_S2 = Trainer(
-#     model=model,
-#     optimizer=optimizer,
-#     criterion=criterion,
-#     device=device,
-#     adapter=lambda batch: identity_adapter(
-#         batch,
-#         input_key="images",
-#         target_key="scene_label",
-#         mask="player_mask"
-#     ),
-#     num_classes=len(scene_to_idx),
-#     save_path="/kaggle/working/best_Baseline5_stage2.pth",
-#     class_names=list(scene_to_idx),
-#     log_name="Debug_Baseline5_stage2",
-#     epochs=20,
-#     use_amp=True,
-#     grad_clip=1.0,
-#     scheduler=scheduler    
-# )
-
-
-
 if __name__ == "__main__":
-    from debug import audit_player_id_spatial_consistency
-
-    audit_player_id_spatial_consistency(
-        train_dataset,
-        name="TRAIN",
-    )
-
-    audit_player_id_spatial_consistency(
-        val_dataset,
-        name="VAL",
-    )
-    print("\nAudit finished. No training was performed.")
-    # trainer_Baseline5_S2.fit(train_loader, val_loader)
-    # Debug_Baseline5_S2.fit(train_loader, val_loader)
+    
+    trainer_Baseline5_S2.fit(train_loader, val_loader)
+   
     
     
     # # ============================
