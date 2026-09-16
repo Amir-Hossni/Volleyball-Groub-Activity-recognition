@@ -374,16 +374,16 @@ trainer_Baseline5_S2 = Trainer(
 
 if __name__ == "__main__":
     from debug import audit_player_id_spatial_consistency
+
     audit_player_id_spatial_consistency(
-    train_dataset,
-    name="TRAIN",
+        train_dataset,
+        name="TRAIN",
     )
 
     audit_player_id_spatial_consistency(
         val_dataset,
         name="VAL",
     )
-
     print("\nAudit finished. No training was performed.")
     # trainer_Baseline5_S2.fit(train_loader, val_loader)
     # Debug_Baseline5_S2.fit(train_loader, val_loader)

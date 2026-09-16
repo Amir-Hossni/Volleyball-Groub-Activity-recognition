@@ -2,22 +2,23 @@ import numpy as np
 from collections import defaultdict
 
 
-def audit_player_id_spatial_consistency(dataset):
+def audit_player_id_spatial_consistency(dataset, name="DATASET"):
     """
-    Audit whether player_ID has a consistent spatial meaning
+    Check whether player_ID has a consistent spatial meaning
     across different clips.
 
-    Uses the actual structure of VolleyballDataset:
+    Actual VolleyballDataset structure:
 
         sample["player_tracks"][player_id][frame_id]["box"]
 
     where ["box"] is a BoxInfo object and:
+
         BoxInfo.box = (x1, y1, x2, y2)
     """
 
     # ---------------------------------------------------------
     # Collect one mean spatial position for each player_ID
-    # in each clip.
+    # in each clip
     # ---------------------------------------------------------
 
     player_positions = defaultdict(list)
@@ -57,7 +58,8 @@ def audit_player_id_spatial_consistency(dataset):
                 dtype=np.float32
             )
 
-            # Mean position of this player inside this clip
+            # Mean spatial position of this player
+            # during this clip
             mean_cx = centers[:, 0].mean()
             mean_cy = centers[:, 1].mean()
 
@@ -71,11 +73,12 @@ def audit_player_id_spatial_consistency(dataset):
             )
 
     # ---------------------------------------------------------
-    # Report cross-clip statistics
+    # Cross-clip statistics
     # ---------------------------------------------------------
 
+    print()
     print("=" * 90)
-    print("PLAYER_ID CROSS-CLIP SPATIAL CONSISTENCY")
+    print(f"PLAYER_ID CROSS-CLIP SPATIAL CONSISTENCY — {name}")
     print("=" * 90)
 
     results = {}
