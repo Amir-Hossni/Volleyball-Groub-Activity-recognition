@@ -357,7 +357,8 @@ Debug_Baseline5_S2 = Trainer(
     adapter=lambda batch: identity_adapter(
         batch,
         input_key="images",
-        target_key="scene_label"
+        target_key="scene_label",
+        mask="player_mask"
     ),
     num_classes=len(scene_to_idx),
     save_path="/kaggle/working/best_Baseline5_stage2.pth",
