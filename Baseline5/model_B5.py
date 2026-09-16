@@ -173,19 +173,18 @@ class GroupTemporalClassifierB5(nn.Module):
 
 
 class B5_StageAFeatureLinearProbe(nn.Module):
-    """
-    Diagnostic experiment:
-    
-    Frozen Stage-A PersonTemporal model
-        -> 12 player features (512 each)
-        -> mean pooling across players
-        -> linear scene classifier
-    """
-
-    def __init__(self, person_model, num_classes=8):
+    def __init__(
+        self,
+        person_model,
+        num_classes=8,
+        num_players=12,
+        player_feature_dim=512,
+    ):
         super().__init__()
 
         self.person_model = person_model
+        self.num_players = num_players
+        self.player_feature_dim = player_feature_dim
 
         # Freeze Stage A
         for param in self.person_model.parameters():
@@ -193,15 +192,18 @@ class B5_StageAFeatureLinearProbe(nn.Module):
 
         self.person_model.eval()
 
-        self.classifier = nn.Linear(512, num_classes)
+        # 12 players × 512 features
+        input_dim = num_players * player_feature_dim
+
+        # Diagnostic classifier: Linear only
+        self.classifier = nn.Linear(input_dim, num_classes)
 
     def train(self, mode=True):
-        """
-        Keep Stage A permanently in eval mode.
-        Only the linear classifier should train.
-        """
         super().train(mode)
+
+        # Keep Stage A frozen AND in eval mode
         self.person_model.eval()
+
         return self
 
     def forward(self, x, player_mask):
@@ -213,44 +215,62 @@ class B5_StageAFeatureLinearProbe(nn.Module):
             (B, P)
 
         Returns:
-            (B, num_classes)
+            logits: (B, num_classes)
         """
 
         B, P, T, C, H, W = x.shape
 
-        # Treat every player as an independent temporal sample
+        # --------------------------------------------------
+        # 1. Merge batch and player dimensions
+        # --------------------------------------------------
         x = x.reshape(B * P, T, C, H, W)
 
-        # Frozen Stage A
+        # --------------------------------------------------
+        # 2. Extract frozen Stage A features
+        # --------------------------------------------------
         with torch.no_grad():
             player_features = self.person_model(
                 x,
                 return_features=True
             )
 
-        # (B*P, 512) -> (B, P, 512)
+        # Expected:
+        # (B * P, 512)
+
+        # --------------------------------------------------
+        # 3. Restore player dimension
+        # --------------------------------------------------
         player_features = player_features.reshape(
-            B, P, 512
+            B,
+            P,
+            self.player_feature_dim
         )
 
-        # Remove padded/missing players
-        mask = player_mask.unsqueeze(-1)  # (B, P, 1)
+        # --------------------------------------------------
+        # 4. Remove padded / missing players
+        # --------------------------------------------------
+        mask = player_mask.unsqueeze(-1)
 
         player_features = player_features.masked_fill(
             ~mask,
             0.0
         )
 
-        # Number of real players
-        num_players = mask.sum(dim=1).clamp(min=1)
-
-        # Mean only over real players
-        team_features = (
-            player_features.sum(dim=1)
-            / num_players
+        # --------------------------------------------------
+        # 5. Full concatenation
+        # --------------------------------------------------
+        team_features = player_features.reshape(
+            B,
+            P * self.player_feature_dim
         )
 
-        # (B, 512) -> (B, 8)
+        # Shape:
+        # (B, 12 * 512)
+        # = (B, 6144)
+
+        # --------------------------------------------------
+        # 6. Linear probe
+        # --------------------------------------------------
         logits = self.classifier(team_features)
 
         return logits
