@@ -1,191 +1,127 @@
-from collections import defaultdict
 import numpy as np
+from collections import defaultdict
 
 
-def audit_player_id_spatial_consistency(dataset, name="Dataset"):
+def audit_player_id_spatial_consistency(dataset):
     """
-    Audit whether player_ID has a stable spatial meaning across clips.
+    Audit whether player_ID has a consistent spatial meaning
+    across different clips.
 
-    For every sample:
-        - compute the mean normalized (x, y) position of each player_ID
-          across the 9 temporal frames.
+    Uses the actual structure of VolleyballDataset:
 
-    Then across all samples:
-        - calculate mean/std position for each player_ID
-        - calculate spatial spread
-        - calculate pairwise distance between player-ID centers
+        sample["player_tracks"][player_id][frame_id]["box"]
+
+    where ["box"] is a BoxInfo object and:
+        BoxInfo.box = (x1, y1, x2, y2)
     """
 
-    # player_id -> list of one representative (x, y) position per sample
+    # ---------------------------------------------------------
+    # Collect one mean spatial position for each player_ID
+    # in each clip.
+    # ---------------------------------------------------------
+
     player_positions = defaultdict(list)
 
-    total_samples = len(dataset)
+    for sample in dataset.samples:
 
-    for idx in range(total_samples):
+        video_id = sample["video_id"]
+        clip_id = sample["clip_id"]
 
-        sample = dataset.samples[idx]
+        player_tracks = sample["player_tracks"]
 
-        frame_boxes = sample["frame_boxes"]
+        for player_id in range(12):
 
-        # Collect positions for each player inside this sample
-        sample_positions = defaultdict(list)
+            track = player_tracks[player_id]
 
-        for frame_id, boxes in frame_boxes.items():
+            if not track:
+                continue
 
-            for box_info in boxes:
+            centers = []
 
-                player_id = box_info.player_ID
+            for frame_id, item in track.items():
+
+                box_info = item["box"]
 
                 x1, y1, x2, y2 = box_info.box
 
-                # Bounding-box center
                 cx = (x1 + x2) / 2.0
                 cy = (y1 + y2) / 2.0
 
-                # Normalize to [0, 1]
-                # Volleyball frames: 1280 x 720
-                cx_norm = cx / 1280.0
-                cy_norm = cy / 720.0
+                centers.append((cx, cy))
 
-                sample_positions[player_id].append(
-                    (cx_norm, cy_norm)
-                )
+            if not centers:
+                continue
 
-        # One representative position for each player
-        # in this sample
-        for player_id, positions in sample_positions.items():
+            centers = np.asarray(
+                centers,
+                dtype=np.float32
+            )
 
-            positions = np.asarray(positions)
-
-            mean_position = positions.mean(axis=0)
+            # Mean position of this player inside this clip
+            mean_cx = centers[:, 0].mean()
+            mean_cy = centers[:, 1].mean()
 
             player_positions[player_id].append(
-                mean_position
+                {
+                    "video_id": video_id,
+                    "clip_id": clip_id,
+                    "cx": mean_cx,
+                    "cy": mean_cy,
+                }
             )
 
-    # =========================================================
-    # Per-player statistics
-    # =========================================================
+    # ---------------------------------------------------------
+    # Report cross-clip statistics
+    # ---------------------------------------------------------
 
-    print("\n" + "=" * 90)
-    print(f"PLAYER ID SPATIAL CONSISTENCY AUDIT — {name}")
+    print("=" * 90)
+    print("PLAYER_ID CROSS-CLIP SPATIAL CONSISTENCY")
     print("=" * 90)
 
-    print(f"Samples analyzed: {total_samples}")
-
-    print("\nPer-player spatial distribution:")
-    print("-" * 90)
-
-    player_means = {}
+    results = {}
 
     for player_id in range(12):
 
         positions = player_positions[player_id]
 
-        if len(positions) == 0:
-
-            print(
-                f"ID {player_id:2d}: "
-                f"NO DATA"
-            )
-
+        if not positions:
             continue
 
-        positions = np.asarray(positions)
-
-        mean_x = positions[:, 0].mean()
-        mean_y = positions[:, 1].mean()
-
-        std_x = positions[:, 0].std()
-        std_y = positions[:, 1].std()
-
-        min_x = positions[:, 0].min()
-        max_x = positions[:, 0].max()
-
-        min_y = positions[:, 1].min()
-        max_y = positions[:, 1].max()
-
-        player_means[player_id] = np.array(
-            [mean_x, mean_y]
+        xy = np.asarray(
+            [
+                [p["cx"], p["cy"]]
+                for p in positions
+            ],
+            dtype=np.float32,
         )
+
+        mean_xy = xy.mean(axis=0)
+
+        std_x = xy[:, 0].std()
+        std_y = xy[:, 1].std()
+
+        distances = np.linalg.norm(
+            xy - mean_xy,
+            axis=1,
+        )
+
+        mean_distance = distances.mean()
+
+        results[player_id] = {
+            "num_clips": len(positions),
+            "mean_cx": float(mean_xy[0]),
+            "mean_cy": float(mean_xy[1]),
+            "std_x": float(std_x),
+            "std_y": float(std_y),
+            "mean_distance": float(mean_distance),
+        }
 
         print(
-            f"ID {player_id:2d} | "
-            f"N={len(positions):4d} | "
-            f"mean=({mean_x:.3f}, {mean_y:.3f}) | "
-            f"std=({std_x:.3f}, {std_y:.3f}) | "
-            f"range_x=({min_x:.3f}, {max_x:.3f}) | "
-            f"range_y=({min_y:.3f}, {max_y:.3f})"
+            f"Player {player_id:2d} | "
+            f"clips={len(positions):4d} | "
+            f"mean=({mean_xy[0]:7.2f}, {mean_xy[1]:7.2f}) | "
+            f"std=({std_x:7.2f}, {std_y:7.2f}) | "
+            f"mean_dist={mean_distance:7.2f}"
         )
 
-    # =========================================================
-    # Pairwise distance between player-ID mean positions
-    # =========================================================
-
-    print("\n" + "=" * 90)
-    print("PAIRWISE DISTANCE BETWEEN PLAYER-ID MEAN POSITIONS")
-    print("=" * 90)
-
-    ids = sorted(player_means.keys())
-
-    for i in range(len(ids)):
-
-        for j in range(i + 1, len(ids)):
-
-            p1 = player_means[ids[i]]
-            p2 = player_means[ids[j]]
-
-            distance = np.linalg.norm(p1 - p2)
-
-            print(
-                f"ID {ids[i]:2d} <-> ID {ids[j]:2d} "
-                f"| distance={distance:.3f}"
-            )
-
-    # =========================================================
-    # Spatial region statistics
-    # =========================================================
-
-    print("\n" + "=" * 90)
-    print("SPATIAL REGION DISTRIBUTION PER PLAYER ID")
-    print("=" * 90)
-
-    print(
-        "Regions: "
-        "LEFT (<0.33), CENTER (0.33-0.66), RIGHT (>0.66)"
-    )
-
-    for player_id in range(12):
-
-        positions = player_positions[player_id]
-
-        if len(positions) == 0:
-            continue
-
-        positions = np.asarray(positions)
-
-        x_values = positions[:, 0]
-
-        left = np.sum(x_values < 0.33)
-        center = np.sum(
-            (x_values >= 0.33) &
-            (x_values <= 0.66)
-        )
-        right = np.sum(x_values > 0.66)
-
-        total = len(x_values)
-
-        print(
-            f"ID {player_id:2d} | "
-            f"LEFT={left / total:.2%} | "
-            f"CENTER={center / total:.2%} | "
-            f"RIGHT={right / total:.2%}"
-        )
-
-
-# =============================================================
-# RUN — NO TRAINING
-# =============================================================
-
-
-
+    return results
