@@ -339,9 +339,9 @@ trainer_Baseline5_S2 = Trainer(
         target_key="scene_label",
         mask="player_mask"
     ),
-    num_classes=len(player_to_idx),
+    num_classes=len(scene_to_idx),
     save_path="/kaggle/working/best_Baseline5_stage2.pth",
-    class_names=list(player_to_idx),
+    class_names=list(scene_to_idx),
     log_name="Baseline5_stage2",
     epochs=50,
     use_amp=True,

@@ -153,10 +153,7 @@ class GroupTemporalClassifierB5(nn.Module):
         mask_3d = player_mask.unsqueeze(-1) # Convert to: (B, P, 1)
 
         # Zero-out padded / invalid players
-        player_features = player_features.masked_fill(
-            ~mask_3d,
-            0.0
-        )
+        player_features = player_features.masked_fill(~mask_3d, 0.0)
 
 
         # Full Concatenation
