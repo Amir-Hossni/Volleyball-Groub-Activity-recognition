@@ -219,7 +219,7 @@ criterion = torch.nn.CrossEntropyLoss(
 optimizer = torch.optim.AdamW(
     model.parameters(),
     lr=3e-4,
-    weight_decay=1e-4
+    weight_decay=5e-4
 )
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
