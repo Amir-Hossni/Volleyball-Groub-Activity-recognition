@@ -107,30 +107,47 @@ class GroupTemporalClassifierB5(nn.Module):
 
         
         # Stage-B classifier
-        self.classifier = nn.Sequential(
+        # self.classifier = nn.Sequential(
             
-            nn.Dropout(dropout),
+        #     nn.Dropout(dropout),
 
-            nn.Linear(input_dim, hidden_dim),          # 6144 → 1024
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(inplace=True),
+        #     nn.Linear(input_dim, hidden_dim),          # 6144 → 1024
+        #     nn.LayerNorm(hidden_dim),
+        #     nn.ReLU(inplace=True),
 
-            nn.Dropout(dropout),
+        #     nn.Dropout(dropout),
 
-            nn.Linear(hidden_dim, hidden_dim // 2),    # 1024 → 512
-            nn.LayerNorm(hidden_dim // 2),
-            nn.ReLU(inplace=True),
+        #     nn.Linear(hidden_dim, hidden_dim // 2),    # 1024 → 512
+        #     nn.LayerNorm(hidden_dim // 2),
+        #     nn.ReLU(inplace=True),
 
-            nn.Dropout(dropout),
+        #     nn.Dropout(dropout),
 
-            nn.Linear(hidden_dim // 2, hidden_dim // 4),  # 512 → 256
-            nn.LayerNorm(hidden_dim // 4),
-            nn.ReLU(inplace=True),
+        #     nn.Linear(hidden_dim // 2, hidden_dim // 4),  # 512 → 256
+        #     nn.LayerNorm(hidden_dim // 4),
+        #     nn.ReLU(inplace=True),
 
-            nn.Dropout(dropout),
+        #     nn.Dropout(dropout),
 
-            nn.Linear(hidden_dim // 4, num_classes),   # 256 → 8
-        )
+        #     nn.Linear(hidden_dim // 4, num_classes),   # 256 → 8
+        # )
+        
+        self.classifier = nn.Sequential(
+                    
+                    nn.Dropout(dropout),
+        
+                    nn.Linear(input_dim, hidden_dim),          # 6144 → 1024
+                    nn.LayerNorm(hidden_dim),
+                    nn.ReLU(inplace=True),
+        
+                    nn.Dropout(dropout),
+                    nn.Linear(hidden_dim , hidden_dim // 4),  # 1024 → 256
+                    nn.LayerNorm(hidden_dim // 4),
+                    nn.ReLU(inplace=True),
+        
+                    nn.Dropout(dropout),
+                    nn.Linear(hidden_dim // 4, num_classes),   # 256 → 8
+                )
 
     def train(self, mode=True):
         super().train(mode)
@@ -141,10 +158,16 @@ class GroupTemporalClassifierB5(nn.Module):
     def forward(self, x, player_mask):
         # x: (B, P, T, C, H, W)
         B, P, T, C, H, W = x.shape
+        
+        
+        # Diagnostic: shuffle player slots during training only
+        if self.training:
+            perm = torch.randperm(P, device=x.device)
+            x = x[:, perm]
+            player_mask = player_mask[:, perm]
 
         # merge batch + players
         x = x.reshape(B * P, T, C, H, W)
-        
         
         # Stage-A inference (frozen)
         with torch.no_grad():
