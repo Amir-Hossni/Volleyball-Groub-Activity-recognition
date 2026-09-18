@@ -77,16 +77,17 @@ val_dataset = VolleyballDataset(
 )
 
 # #sampler
-# train_sampler = create_weighted_sampler(
-#     train_dataset,
-#     target_key="scene_label"
-# )
+train_sampler = create_weighted_sampler(
+    train_dataset,
+    target_key="scene_label"
+)
 
 
 # # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
     batch_size=16,
+    sampler=train_sampler,
     num_workers=4,
     pin_memory=True,
     persistent_workers=True,
@@ -215,11 +216,13 @@ criterion = torch.nn.CrossEntropyLoss(
     ignore_index=-1
 )
 
+
+
 # Optimizer
 optimizer = torch.optim.AdamW(
     model.parameters(),
-    lr=3e-4,
-    weight_decay=5e-4
+    lr=1e-4,
+    weight_decay=1e-4
 )
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(

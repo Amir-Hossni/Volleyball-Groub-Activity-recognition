@@ -86,7 +86,7 @@ class GroupTemporalClassifierB5(nn.Module):
         person_model,
         num_classes=8,
         num_players=12,
-        hidden_dim=4096,
+        hidden_dim=2048,
         dropout=0.4,
     ):
         super().__init__()
@@ -111,25 +111,25 @@ class GroupTemporalClassifierB5(nn.Module):
             
             nn.Dropout(dropout),
 
-            nn.Linear(input_dim, hidden_dim),          # 6144 → 4096
+            nn.Linear(input_dim, hidden_dim),          # 6144 → 2048
             nn.LayerNorm(hidden_dim),
             nn.ReLU(inplace=True),
 
             nn.Dropout(dropout),
 
-            nn.Linear(hidden_dim, hidden_dim // 2),    # 4096 → 2048
+            nn.Linear(hidden_dim, hidden_dim // 2),    # 2048 → 1024
             nn.LayerNorm(hidden_dim // 2),
             nn.ReLU(inplace=True),
 
             nn.Dropout(dropout),
 
-            nn.Linear(hidden_dim // 2, hidden_dim // 4),  # 2048 → 1024
+            nn.Linear(hidden_dim // 2, hidden_dim // 4),  # 1024 → 512
             nn.LayerNorm(hidden_dim // 4),
             nn.ReLU(inplace=True),
 
             nn.Dropout(dropout),
 
-            nn.Linear(hidden_dim // 4, num_classes),   # 1024 → 8
+            nn.Linear(hidden_dim // 4, num_classes),   # 512 → 8
         )
         
         
