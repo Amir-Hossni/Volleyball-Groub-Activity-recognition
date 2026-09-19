@@ -79,6 +79,14 @@ class GroupTemporalClassifierB5(nn.Module):
     Wraps a frozen Stage-A PersonTemporalB5, extracts per-player temporal
     features, concatenates them across players, and classifies the group
     activity.
+    
+    Important:
+        - Stage A is frozen.
+        - forward() is called automatically during training/inference.
+        - reset_classifier_blocks() is called manually before
+          starting a new experiment when selective weight reset
+          is desired.
+        - reset_classifier_blocks() does not run during forward().
     """
 
     def __init__(
@@ -87,7 +95,7 @@ class GroupTemporalClassifierB5(nn.Module):
         num_classes=8,
         num_players=12,
         hidden_dim=2048,
-        dropout=0.4,
+        dropout=0.5,
     ):
         super().__init__()
 
@@ -178,5 +186,61 @@ class GroupTemporalClassifierB5(nn.Module):
 
 
         return output
+    
+    def reset_classifier_blocks(self, blocks=(1, 2)):
+            """
+            Reset selected Stage-2 classifier blocks.
+    
+            Block 1:
+                6144 → 4096 + LayerNorm
+    
+            Block 2:
+                4096 → 2048 + LayerNorm
+    
+            Block 3:
+                2048 → 1024 + LayerNorm
+    
+            Block 4:
+                1024 → 8
+            """
+    
+            block_indices = {
+                1: (1, 2),
+                2: (5, 6),
+                3: (9, 10),
+                4: (13,),
+            }
+    
+            for block in blocks:
+    
+                if block not in block_indices:
+                    raise ValueError(
+                        f"Invalid block {block}. "
+                        f"Choose from 1, 2, 3, 4."
+                    )
+    
+                indices = block_indices[block]
+    
+                # -------------------------
+                # Reset Linear
+                # -------------------------
+    
+                linear = self.classifier[indices[0]]
+    
+                nn.init.xavier_uniform_(linear.weight)
+    
+                if linear.bias is not None:
+                    nn.init.zeros_(linear.bias)
+    
+                # -------------------------
+                # Reset LayerNorm
+                # -------------------------
+    
+                if len(indices) > 1:
+    
+                    layer_norm = self.classifier[indices[1]]
+    
+                    nn.init.ones_(layer_norm.weight)
+                    nn.init.zeros_(layer_norm.bias)
 
 

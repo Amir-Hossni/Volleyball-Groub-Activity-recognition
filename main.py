@@ -210,8 +210,14 @@ checkpoint = torch.load(
     map_location=device
 )
 
+# fine-tune B5_stageB with the loaded weights
 model.load_state_dict(
     checkpoint["model_state_dict"]
+)
+
+# Selective reset
+model.reset_classifier_blocks(
+    blocks=(1, 2)
 )
 
 if torch.cuda.device_count() > 1:
