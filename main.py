@@ -204,6 +204,16 @@ model_B5_stage1.load_state_dict(
 
 model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
 
+# Load BEST Stage-2 checkpoint
+checkpoint = torch.load(
+    "/kaggle/working/best_Baseline5_stage2.pth",
+    map_location=device
+)
+
+model.load_state_dict(
+    checkpoint["model_state_dict"]
+)
+
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
     model = torch.nn.DataParallel(model)
