@@ -15,11 +15,13 @@ from engine.trainer import Trainer
 from engine.sampler import create_weighted_sampler
 from engine.adapters import flatten_person_batch, identity_adapter
 
-from Baseline1.model_B1 import SceneClassifierB1
-from Baseline2.model_B2 import B2Model
-from Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
-from Baseline4.model_B4 import TemporalImageClassifierB4
-from Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5 
+from Models.Baseline1.model_B1 import SceneClassifierB1
+from Models.Baseline2.model_B2 import B2Model
+from Models.Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
+from Models.Baseline4.model_B4 import TemporalImageClassifierB4
+from Models.Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5 
+
+
 
 # from Data.create_annot_pkl import create_pkl_version
 
