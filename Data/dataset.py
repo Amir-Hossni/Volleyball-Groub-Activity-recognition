@@ -106,6 +106,17 @@ class VolleyballDataset(Dataset):
                         frame_boxes,
                         scene_label,
                     )
+                    
+                    
+                 #  B6
+                # sequence of 9 images with players    
+                elif self.mode == "clip_frames_players":
+                    self._add_clip_samples(
+                        video_id,
+                        clip_id,
+                        frame_boxes,
+                        scene_label,
+                    )    
 
                 # B5 / B7
                 # player tracklets 12 players x 9 frames
@@ -235,7 +246,7 @@ class VolleyballDataset(Dataset):
         )
 
 
-    # B4 / B6
+    # B4 / B6 (stageB)
     # Temporal image model
     def _add_clip_samples(self, video_id, clip_id, frame_boxes, scene_label):
         """ One sample = one clip
@@ -409,7 +420,7 @@ class VolleyballDataset(Dataset):
             }
 
 
-        # B4 / B6
+        # B4 
         elif self.mode == "clip_frames":
             frames = []
             frame_ids = sorted(sample["frame_boxes"].keys())
@@ -431,6 +442,116 @@ class VolleyballDataset(Dataset):
             }
 
         
+        # B6
+        elif self.mode == "clip_frames_players":
+
+            frame_boxes = sample["frame_boxes"]
+
+            # --------------------------------------------------
+            # 1. Get the 9 frames of the clip
+            # --------------------------------------------------
+            frame_ids = sorted(frame_boxes.keys())
+
+            player_images = []
+            player_mask = []
+
+            # --------------------------------------------------
+            # 2. Process every frame
+            # --------------------------------------------------
+            for frame_id in frame_ids:
+
+                image_path = (
+                    self.videos_path
+                    / sample["video_id"]
+                    / sample["clip_id"]
+                    / f"{frame_id}.jpg"
+                )
+
+                image = self._load_image(image_path)
+
+                # Sort players by player_ID
+                boxes = sorted(
+                    frame_boxes[frame_id],
+                    key=lambda box: box.player_ID
+                )
+
+                frame_players = []
+                frame_mask = []
+
+                # --------------------------------------------------
+                # 3. Always create 12 player slots
+                # --------------------------------------------------
+                for player_id in range(12):
+
+                    player_box = next(
+                        (
+                            box
+                            for box in boxes
+                            if box.player_ID == player_id
+                        ),
+                        None,
+                    )
+
+                    # --------------------------------------------------
+                    # Player exists
+                    # --------------------------------------------------
+                    if player_box is not None:
+
+                        crop = self._crop_player(
+                            image,
+                            player_box
+                        )
+
+                        if self.transform:
+                            crop = self.transform(crop)
+
+                        frame_players.append(crop)
+                        frame_mask.append(True)
+
+                    # --------------------------------------------------
+                    # Player does not exist -> padding
+                    # --------------------------------------------------
+                    else:
+
+                        if frame_players:
+                            padding = torch.zeros_like(
+                                frame_players[0]
+                            )
+                        else:
+                            padding = torch.zeros(
+                                3,
+                                224,
+                                224
+                            )
+
+                        frame_players.append(padding)
+                        frame_mask.append(False)
+
+                # --------------------------------------------------
+                # 4. Stack players of this frame
+                # --------------------------------------------------
+                frame_players = torch.stack(frame_players)
+
+                frame_mask = torch.tensor(
+                    frame_mask,
+                    dtype=torch.bool
+                )
+
+                player_images.append(frame_players)
+                player_mask.append(frame_mask)
+
+            # --------------------------------------------------
+            # 5. Stack the 9 frames
+            # --------------------------------------------------
+            player_images = torch.stack(player_images)
+
+            player_mask = torch.stack(player_mask)
+
+            return {
+                "images": player_images,
+                "mask": player_mask,
+                "scene_label": sample["scene_label"],
+            }
        
         # B5/ B7
         # Temporal player model

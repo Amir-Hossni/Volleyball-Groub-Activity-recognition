@@ -14,10 +14,14 @@ def identity_adapter(batch, input_key="images", target_key="scene_label", mask=N
     inputs = batch[input_key]
     targets = batch[target_key]
 
-    if mask is not None:
+    # B5
+    if mask == "player_mask":
         player_mask = inputs.abs().sum(dim=(2, 3, 4, 5)) > 0
-
         return inputs, targets, player_mask
+    #B6
+    elif mask == "mask":    
+        mask = inputs.abs().sum(dim=(3, 4, 5)) > 0
+        return inputs, targets, mask
 
     return inputs, targets
 

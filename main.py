@@ -1,6 +1,6 @@
 
 from pathlib import Path
-
+import copy
 import yaml
 from torch.utils.data import DataLoader
 import torch
@@ -19,7 +19,9 @@ from Models.Baseline1.model_B1 import SceneClassifierB1
 from Models.Baseline2.model_B2 import B2Model
 from Models.Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Models.Baseline4.model_B4 import TemporalImageClassifierB4
-from Models.Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5 
+from Models.Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5
+from Models.Baseline6.model_B6 import B6GroupActivityClassifier
+
 
 
 
@@ -63,7 +65,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_temporal",
+    mode="clip_frames_players",
     transform=transform
 )
 
@@ -74,7 +76,7 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_temporal",
+    mode="clip_frames_players",
     transform=transform
 )
 
@@ -183,7 +185,7 @@ model_B4 = TemporalImageClassifierB4(
 #Basline5
 
 # stage1
-backboneB5 = backboneB3
+backboneB5 = copy.deepcopy(backboneB3)
 model_B5_stage1 = PersonTemporalB5(
     backbone=backboneB5,
     num_classes=9,
@@ -204,20 +206,29 @@ model_B5_stage1.load_state_dict(
     checkpoint["model_state_dict"]
 )
 
-model = GroupTemporalClassifierB5(person_model=model_B5_stage1)
+
 
 # Load BEST Stage-2 checkpoint
 checkpoint = torch.load(
     "/kaggle/working/best_Baseline5_stage2.pth",
     map_location=device
 )
+model_b5 = GroupTemporalClassifierB5(person_model=model_B5_stage1)
 
 # fine-tune B5_stageB with the loaded weights
-model.load_state_dict(
+model_b5.load_state_dict(
     checkpoint["model_state_dict"]
 )
 
 
+
+#Basline6
+backboneB6 = copy.deepcopy(backboneB3)
+
+model_B6 = B6GroupActivityClassifier(backbone=backboneB6)
+
+
+model = model_B6
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
     model = torch.nn.DataParallel(model)
@@ -234,7 +245,7 @@ criterion = torch.nn.CrossEntropyLoss(
 
 # Optimizer
 optimizer = torch.optim.AdamW(
-    model.parameters(),
+    filter(lambda p: p.requires_grad, model.parameters()),
     lr=1e-4,
     weight_decay=1e-4
 )
@@ -364,9 +375,30 @@ trainer_Baseline5_S2 = Trainer(
 )
 
 
+trainer_Baseline6 = Trainer(
+    model=model,
+    optimizer=optimizer,
+    criterion=criterion,
+    device=device,
+    adapter=lambda batch: identity_adapter(
+        batch,
+        input_key="images",
+        target_key="scene_label",
+        mask="mask"
+    ),
+    num_classes=len(scene_to_idx),
+    save_path="/kaggle/working/best_Baseline6.pth",
+    class_names=list(scene_to_idx),
+    log_name="Baseline6",
+    epochs=50,
+    use_amp=True,
+    grad_clip=1.0,
+    scheduler=scheduler    
+)
+
 
 if __name__ == "__main__":
     
-    trainer_Baseline5_S2.fit(train_loader, val_loader)
+    trainer_Baseline6.fit(train_loader, val_loader)
    
     
