@@ -122,9 +122,9 @@ model_B6 = B6GroupActivityClassifier(backbone=backboneB6)
 
 
 model = model_B6
-if torch.cuda.device_count() > 1:
-    print("Using DataParallel")
-    model = torch.nn.DataParallel(model)
+# if torch.cuda.device_count() > 1:
+#     print("Using DataParallel")
+#     model = torch.nn.DataParallel(model)
 
 model = model.to(device)
 
