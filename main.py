@@ -250,11 +250,19 @@ optimizer = torch.optim.AdamW(
     weight_decay=1e-4
 )
 
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer,
-    T_max=50,
-    eta_min=1e-6
+    mode="min",
+    factor=0.1,
+    patience=2,
+    min_lr=1e-6
 )
+
+# scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+#     optimizer,
+#     T_max=50,
+#     eta_min=1e-6
+# )
 
 
 

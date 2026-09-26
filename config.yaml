@@ -1,5 +1,4 @@
-Data:
-
+Data: 
   # Dataset root
   DATA_ROOT: "/kaggle/input/datasets/ahmedmohamed365/volleyball"
 

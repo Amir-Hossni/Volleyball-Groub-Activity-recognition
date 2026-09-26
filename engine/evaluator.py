@@ -65,7 +65,7 @@ def evaluate(
                 outputs = model(inputs)
 
         loss_val = criterion(outputs, targets)
-        total_loss += loss_val
+        total_loss += loss_val.item()
 
         predictions = torch.argmax(outputs, dim=1)
 

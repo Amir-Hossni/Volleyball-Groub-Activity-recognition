@@ -324,7 +324,7 @@ class Trainer:
                 )
 
                 if self.scheduler is not None:
-                    self.scheduler.step()
+                    self.scheduler.step(val_loss)
                 
                 if early_stopped:
                     break
