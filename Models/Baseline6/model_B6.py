@@ -69,7 +69,7 @@ class B6GroupActivityClassifier(nn.Module):
             kernel_size=self.fused_time_steps,  # 18
         ),
 
-        nn.BatchNorm1d(self.hidden_dim // 2),
+        # nn.BatchNorm1d(self.hidden_dim // 2),
         nn.ReLU(inplace=True),
 
         nn.Conv1d(
@@ -78,7 +78,7 @@ class B6GroupActivityClassifier(nn.Module):
             kernel_size=1,
         ),
 
-        nn.BatchNorm1d(self.hidden_dim // 4),
+        # nn.BatchNorm1d(self.hidden_dim // 4),
         nn.ReLU(inplace=True),
 
         nn.Flatten()
@@ -88,31 +88,21 @@ class B6GroupActivityClassifier(nn.Module):
         # Group classifier
         classifier_input = self.hidden_dim // 4  # 128
 
-        # self.classifier = nn.Sequential(
-        #     nn.Dropout(dropout),
-        #     nn.Linear(classifier_input, self.hidden_dim), # 512 → 128                
-        #     nn.LayerNorm(self.hidden_dim),
-        #     nn.ReLU(inplace=True),
-
-        #     nn.Dropout(dropout),
-        #     nn.Linear(self.hidden_dim, self.hidden_dim // 2,), # 512 → 256
-        #     nn.LayerNorm(self.hidden_dim // 2),
-        #     nn.ReLU(inplace=True),
-
-        #     nn.Dropout(dropout),
-        #     nn.Linear(self.hidden_dim // 2, num_classes, ) # 256  →8
-        # )
         self.classifier = nn.Sequential(
-                nn.Dropout(dropout),
-                
-                nn.Linear(classifier_input, 128), # 128 → 128                
-                nn.LayerNorm(128),
-                nn.ReLU(inplace=True),
-    
+            nn.Dropout(dropout),
+            nn.Linear(classifier_input, self.hidden_dim), # 512 → 128                
+            nn.LayerNorm(self.hidden_dim),
+            nn.ReLU(inplace=True),
 
-                nn.Dropout(dropout),
-                nn.Linear(128, num_classes, ) # 128  →8
-            )    
+            nn.Dropout(dropout),
+            nn.Linear(self.hidden_dim, self.hidden_dim // 2,), # 512 → 256
+            nn.LayerNorm(self.hidden_dim // 2),
+            nn.ReLU(inplace=True),
+
+            nn.Dropout(dropout),
+            nn.Linear(self.hidden_dim // 2, num_classes, ) # 256  →8
+        )
+       
 
     def train(self, mode=True):
 
