@@ -19,7 +19,7 @@ class B6GroupActivityClassifier(nn.Module):
         num_classes=8,
         num_frames=9,
         hidden_dim=512,
-        dropout=0.5,
+        dropout=0.3,
     ):
         super().__init__()
 
