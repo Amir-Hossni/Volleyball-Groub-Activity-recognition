@@ -54,7 +54,7 @@ val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 
 
 # Transform
-transform = prepare_model(image_level=False)
+transform = prepare_model(image_level=True)
 
 
 
@@ -237,8 +237,8 @@ model = model.to(device)
 
 
 # Loss
-criterion = torch.nn.CrossEntropyLoss(
-    ignore_index=-1
+criterion = nn.CrossEntropyLoss(
+    label_smoothing=0.1
 )
 
 
@@ -247,8 +247,13 @@ criterion = torch.nn.CrossEntropyLoss(
 optimizer = torch.optim.AdamW(
     filter(lambda p: p.requires_grad, model.parameters()),
     lr=1e-4,
-    weight_decay=1e-4
+    weight_decay=1e-3
 )
+# 1e-4
+# 3e-4
+# 1e-3
+
+
 
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer,
