@@ -69,7 +69,7 @@ class B6GroupActivityClassifier(nn.Module):
             kernel_size=self.fused_time_steps,  # 18
         ),
 
-        # nn.BatchNorm1d(self.hidden_dim // 2),
+        nn.BatchNorm1d(self.hidden_dim // 2),
         nn.ReLU(inplace=True),
 
         nn.Conv1d(
@@ -78,7 +78,7 @@ class B6GroupActivityClassifier(nn.Module):
             kernel_size=1,
         ),
 
-        # nn.BatchNorm1d(self.hidden_dim // 4),
+        nn.BatchNorm1d(self.hidden_dim // 4),
         nn.ReLU(inplace=True),
 
         nn.Flatten()

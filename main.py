@@ -247,7 +247,7 @@ criterion = nn.CrossEntropyLoss(
 optimizer = torch.optim.AdamW(
     filter(lambda p: p.requires_grad, model.parameters()),
     lr=1e-4,
-    weight_decay=1e-3
+    weight_decay=1e-4
 )
 # 1e-4
 # 3e-4
@@ -259,7 +259,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer,
     mode="min",
     factor=0.1,
-    patience=2,
+    patience=4,
     min_lr=1e-6
 )
 
@@ -405,7 +405,7 @@ trainer_Baseline6 = Trainer(
     log_name="Baseline6",
     epochs=50,
     use_amp=True,
-    grad_clip=1.0,
+    grad_clip=None,
     scheduler=scheduler    
 )
 
