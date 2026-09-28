@@ -71,7 +71,8 @@ class B6GroupActivityClassifier(nn.Module):
             batch_first=True,
         )
 
-
+        features = self.feature_dropout(features)
+        
         # Group classifier
 
         classifier_input = self.hidden_dim  # 500
