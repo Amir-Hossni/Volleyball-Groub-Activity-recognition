@@ -48,13 +48,24 @@ videos_path = data_root / data_cfg["PATHS"]["VIDEOS_PATH"]
 annot_root = data_root / data_cfg["PATHS"]["TRACKING_ANNOTATION_PATH"]
 pkl_path = Path(data_cfg["PATHS"]["PKL_PATH"])
 scene_to_idx = data_cfg["CATEGORIES"]["SCENE_TO_IDX"]
+# SCENE_TO_IDX has 16 keys (hyphen/underscore aliases) for 8 classes: 0..7
+scene_class_names = [
+    "l_pass",
+    "r_pass",
+    "l_spike",
+    "r_spike",
+    "l_set",
+    "r_set",
+    "l_winpoint",
+    "r_winpoint",
+]
 player_to_idx = data_cfg["CATEGORIES"]["PLAYER_TO_IDX"]
 train_ids = data_cfg["SPLIT"]["TRAIN_IDS"]
 val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 
 
 # Transform
-transform = prepare_model(image_level=True)
+transform = prepare_model(image_level=False)
 
 
 
@@ -129,7 +140,7 @@ model_B1 = SceneClassifierB1(
 #B2
 model_B2 = B2Model(
     num_players=12,
-    num_classes=len(scene_to_idx),
+    num_classes=8,
     pretrained=True
 )
 
@@ -314,9 +325,9 @@ trainer_b3_stage2 = Trainer(
     criterion=criterion,
     device=device,
     adapter=identity_adapter,
-    num_classes=len(scene_to_idx),
+    num_classes=8,
     save_path="/kaggle/working/best_B3_group_stage2.pth",
-    class_names=list(scene_to_idx),
+    class_names=scene_class_names,
     log_name="B3_group_stage2",
     epochs=50,
     use_amp=True,
@@ -334,9 +345,9 @@ trainer_Baseline4 = Trainer(
         input_key="frames",
         target_key="scene_label"
     ),
-    num_classes=len(scene_to_idx),
+    num_classes=8,
     save_path="/kaggle/working/best_Baseline4.pth",
-    class_names=list(scene_to_idx),
+    class_names=scene_class_names,
     log_name="Baseline4",
     epochs=50,
     use_amp=True,
@@ -377,9 +388,9 @@ trainer_Baseline5_S2 = Trainer(
         target_key="scene_label",
         mask="player_mask"
     ),
-    num_classes=len(scene_to_idx),
+    num_classes=8,
     save_path="/kaggle/working/best_Baseline5_stage2.pth",
-    class_names=list(scene_to_idx),
+    class_names=scene_class_names,
     log_name="Baseline5_stage2",
     epochs=50,
     use_amp=True,
@@ -399,9 +410,9 @@ trainer_Baseline6 = Trainer(
         target_key="scene_label",
         mask="mask"
     ),
-    num_classes=len(scene_to_idx),
+    num_classes=8,
     save_path="/kaggle/working/best_Baseline6.pth",
-    class_names=list(scene_to_idx),
+    class_names=scene_class_names,
     log_name="Baseline6",
     epochs=50,
     use_amp=True,

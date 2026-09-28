@@ -38,6 +38,17 @@ videos_path = data_root / data_cfg["PATHS"]["VIDEOS_PATH"]
 annot_root = data_root / data_cfg["PATHS"]["TRACKING_ANNOTATION_PATH"]
 pkl_path = Path(data_cfg["PATHS"]["PKL_PATH"])
 scene_to_idx = data_cfg["CATEGORIES"]["SCENE_TO_IDX"]
+# SCENE_TO_IDX has 16 keys (hyphen/underscore aliases) for 8 classes: 0..7
+scene_class_names = [
+    "l_pass",
+    "r_pass",
+    "l_spike",
+    "r_spike",
+    "l_set",
+    "r_set",
+    "l_winpoint",
+    "r_winpoint",
+]
 player_to_idx = data_cfg["CATEGORIES"]["PLAYER_TO_IDX"]
 train_ids = data_cfg["SPLIT"]["TRAIN_IDS"]
 val_ids = data_cfg["SPLIT"]["VAL_IDS"]
@@ -309,7 +320,7 @@ for epoch in range(num_epochs):
         cm = confusion_matrix(
             all_targets,
             all_predictions,
-            labels=list(range(len(scene_to_idx)))
+            labels=list(range(8))
         )
 
         plt.figure(figsize=(8, 7))
@@ -321,15 +332,15 @@ for epoch in range(num_epochs):
         plt.title("Validation Confusion Matrix")
 
         plt.xticks(
-            range(len(scene_to_idx)),
-            list(scene_to_idx.keys()),
+            range(8),
+            scene_class_names,
             rotation=45,
             ha="right"
         )
 
         plt.yticks(
-            range(len(scene_to_idx)),
-            list(scene_to_idx.keys())
+            range(8),
+            scene_class_names
         )
 
         for i in range(cm.shape[0]):
