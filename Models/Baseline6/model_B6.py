@@ -71,8 +71,7 @@ class B6GroupActivityClassifier(nn.Module):
             batch_first=True,
         )
 
-        features = self.feature_dropout(features)
-        
+
         # Group classifier
 
         classifier_input = self.hidden_dim  # 500
@@ -125,7 +124,7 @@ class B6GroupActivityClassifier(nn.Module):
         B, T, P, C, H, W = x.shape
 
 
-        # 1. Flatten all player crops:
+        #  Flatten all player crops:
         # (B,T,P,C,H,W) -> (B*T*P,C,H,W)
 
         x = x.reshape(
@@ -148,7 +147,7 @@ class B6GroupActivityClassifier(nn.Module):
         valid_x = x[flat_mask]
 
 
-        # 2. Frozen B3 ResNet50
+        #  Frozen B3 ResNet50
         #
         # Each real player crop independently becomes:
         #
@@ -165,7 +164,7 @@ class B6GroupActivityClassifier(nn.Module):
         valid_features = valid_features.flatten(1)
 
 
-        # 3. Restore missing players as zero vectors:
+        #  Restore missing players as zero vectors:
         # (B*T*P,2048)
 
         features = torch.zeros(
@@ -189,12 +188,10 @@ class B6GroupActivityClassifier(nn.Module):
         )
 
 
-        # 4. Feature dropout
-
-        features = self.feature_dropout(features)
+      
 
 
-        # 5. Player Max Pooling
+        #  Player Max Pooling
         #
         # (B,T,P,2048)
         #        ↓ max over P
@@ -224,7 +221,7 @@ class B6GroupActivityClassifier(nn.Module):
         )
 
 
-        # 6. Group feature projection
+        # Group feature projection
         #
         # Paper:
         # frame-level feature -> FC 3000
@@ -238,7 +235,7 @@ class B6GroupActivityClassifier(nn.Module):
         # (B,T,3000)
 
 
-        # 7. Group LSTM = LSTM 2
+        #  Group LSTM = LSTM 2
         #
         # (B,T,3000)
         #      ↓
@@ -247,7 +244,7 @@ class B6GroupActivityClassifier(nn.Module):
         out, _ = self.lstm(team)
 
 
-        # 8. Final group classification
+        #  Final group classification
         #
         # Use final group LSTM representation.
 
