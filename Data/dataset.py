@@ -85,6 +85,17 @@ class VolleyballDataset(Dataset):
                         scene_label,
                     )
 
+                # B3 Stage 1
+                # 12 players from EVERY frame of the 9-frame window
+                elif self.mode == "person_frames":
+                    self._add_person_frames_samples(
+                        video_id,
+                        clip_id,
+                        clip_path,
+                        frame_boxes,
+                        scene_label,
+                    )
+
                 # B1
                 # middle frame only
                 elif self.mode == "single_frame":
@@ -214,7 +225,42 @@ class VolleyballDataset(Dataset):
             }
         )
 
-  
+    # B3 Stage 1
+    def _add_person_frames_samples(
+        self,
+        video_id,
+        clip_id,
+        clip_path,
+        frame_boxes,
+        scene_label,
+    ):
+        """ One sample = all players of ONE frame, for every frame of the window.
+
+            Same crops/labels as mode "person" (9 frames x all players),
+            but each frame image is decoded once for all its players.
+
+            Output later (same as person_grouped):
+            images [12,C,H,W], player_labels [12] (-1 = padding) """
+        for frame_id in sorted(frame_boxes.keys()):
+            # Keep player order fixed
+            boxes = sorted(frame_boxes[frame_id], key=lambda x: x.player_ID)
+
+            # cache labels
+            for box in boxes:
+                box.label_idx = self.player_to_idx[box.category]
+
+            self.samples.append(
+                {
+                    "video_id": video_id,
+                    "clip_id": clip_id,
+                    "frame_id": frame_id,
+                    "frame_path": clip_path / f"{frame_id}.jpg",
+                    "boxes": boxes,
+                    "scene_label": scene_label,
+                }
+            )
+
+
     # B1
     # Image classification
     def _add_single_frame_samples(
@@ -366,8 +412,8 @@ class VolleyballDataset(Dataset):
                 "frame_id": sample["frame_id"],
             }
             
-        # B3 Stage 2
-        elif self.mode == "person_grouped":
+        # B3 Stage 2 (one frame) / B3 Stage 1 person_frames (every frame)
+        elif self.mode in ("person_grouped", "person_frames"):
             image = self._load_image(sample["frame_path"])
             boxes = sample["boxes"]
 

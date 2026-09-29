@@ -65,7 +65,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person",
+    mode="person_frames",
     transform=transform
 )
 
@@ -76,7 +76,7 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person",
+    mode="person_frames",
     transform=transform
 )
 
@@ -318,11 +318,7 @@ trainer_b3_stage1 = Trainer(
     optimizer=b3_stageA_optimizer,
     criterion=b3_stageA_criterion,
     device=device,
-    adapter=lambda batch: identity_adapter(
-        batch,
-        input_key="image",
-        target_key="player_label"
-    ),
+    adapter=flatten_person_batch,
     num_classes=len(player_to_idx),
     save_path="/kaggle/working/best_B3_person_stage1_v2.pth",
     class_names=list(player_to_idx),
@@ -435,6 +431,13 @@ trainer_Baseline6 = Trainer(
 
 
 if __name__ == "__main__":
+
+    # Expected: frames 19368 / 12069, crops 231327 / 143829
+    print(
+        f"B3 stage A frames: train {len(train_dataset)} | val {len(val_dataset)} | "
+        f"crops: train {sum(len(s['boxes']) for s in train_dataset.samples)} | "
+        f"val {sum(len(s['boxes']) for s in val_dataset.samples)}"
+    )
 
     trainer_b3_stage1.fit(train_loader, val_loader)
    
