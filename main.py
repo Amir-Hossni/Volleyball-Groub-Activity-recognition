@@ -54,7 +54,7 @@ val_ids = data_cfg["SPLIT"]["VAL_IDS"]
 
 
 # Transform
-transform = prepare_model(image_level=True)
+transform = prepare_model(image_level=False)
 
 
 
@@ -65,7 +65,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="clip_frames_players",
+    mode="person",
     transform=transform
 )
 
@@ -76,22 +76,23 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="clip_frames_players",
+    mode="person",
     transform=transform
 )
 
 # #sampler
-train_sampler = create_weighted_sampler(
-    train_dataset,
-    target_key="scene_label"
-)
+# B3 stage A: no sampler (the scene-label sampler does not apply to player actions)
+# train_sampler = create_weighted_sampler(
+#     train_dataset,
+#     target_key="scene_label"
+# )
 
 
 # # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
-    batch_size=8,
-    sampler=train_sampler,
+    batch_size=16,
+    shuffle=True,
     num_workers=4,
     pin_memory=True,
     persistent_workers=True,
@@ -100,7 +101,7 @@ train_loader = DataLoader(
 
 val_loader = DataLoader(
     dataset=val_dataset,
-    batch_size=8,
+    batch_size=16,
     shuffle=False,
     num_workers=4,
     pin_memory=True,
@@ -236,6 +237,25 @@ if torch.cuda.device_count() > 1:
 model = model.to(device)
 
 
+# B3 stage A retrain: all 9 frames per clip (mode="person")
+# fresh ImageNet init, own optimizer/loss — B6 settings below stay untouched
+b3_stageA_model = PersonClassifierB3(
+    num_classes=len(player_to_idx),
+    pretrained=True
+)
+if torch.cuda.device_count() > 1:
+    b3_stageA_model = torch.nn.DataParallel(b3_stageA_model)
+
+b3_stageA_model = b3_stageA_model.to(device)
+
+b3_stageA_criterion = nn.CrossEntropyLoss()
+
+b3_stageA_optimizer = torch.optim.AdamW(
+    b3_stageA_model.parameters(),
+    lr=1e-4
+)
+
+
 # Loss
 criterion = nn.CrossEntropyLoss(
     label_smoothing=0.1
@@ -294,16 +314,20 @@ trainer_Baseline1 = Trainer(
 
 
 trainer_b3_stage1 = Trainer(
-    model=model,
-    optimizer=optimizer,
-    criterion=criterion,
+    model=b3_stageA_model,
+    optimizer=b3_stageA_optimizer,
+    criterion=b3_stageA_criterion,
     device=device,
-    adapter=flatten_person_batch,
+    adapter=lambda batch: identity_adapter(
+        batch,
+        input_key="image",
+        target_key="player_label"
+    ),
     num_classes=len(player_to_idx),
-    save_path="/kaggle/working/best_B3_person_stage1.pth",
+    save_path="/kaggle/working/best_B3_person_stage1_v2.pth",
     class_names=list(player_to_idx),
-    log_name="B3_person_stage1",
-    epochs=50,
+    log_name="B3_person_stage1_v2",
+    epochs=5,
     use_amp=True,
     grad_clip=None,
 )
@@ -411,7 +435,10 @@ trainer_Baseline6 = Trainer(
 
 
 if __name__ == "__main__":
-    
-    trainer_Baseline6.fit(train_loader, val_loader)
+
+    # Expected from the real-data audit: 231327 train / 143829 val crops
+    print(f"B3 stage A crops: train {len(train_dataset)} | val {len(val_dataset)}")
+
+    trainer_b3_stage1.fit(train_loader, val_loader)
    
     
