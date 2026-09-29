@@ -229,7 +229,7 @@ backboneB6 = copy.deepcopy(backboneB3)
 model_B6 = B6GroupActivityClassifier(backbone=backboneB6)
 
 
-model = model_B6
+model = person_model
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
     model = torch.nn.DataParallel(model)
@@ -435,9 +435,6 @@ trainer_Baseline6 = Trainer(
 
 
 if __name__ == "__main__":
-
-    # Expected from the real-data audit: 231327 train / 143829 val crops
-    print(f"B3 stage A crops: train {len(train_dataset)} | val {len(val_dataset)}")
 
     trainer_b3_stage1.fit(train_loader, val_loader)
    
