@@ -266,7 +266,7 @@ criterion = nn.CrossEntropyLoss(
 # Optimizer
 optimizer = torch.optim.AdamW(
     filter(lambda p: p.requires_grad, model.parameters()),
-    lr=3e-4,
+    lr=1e-4,
     weight_decay=1e-4
 )
 # 1e-4

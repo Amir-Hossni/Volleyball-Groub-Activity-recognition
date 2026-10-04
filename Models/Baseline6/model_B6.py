@@ -76,20 +76,10 @@ class B6GroupActivityClassifier(nn.Module):
 
         classifier_input = self.hidden_dim  # 500
 
-        self.classifier = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(classifier_input, 256), # 500 → 265               
-            nn.LayerNorm(256),
-            nn.ReLU(inplace=True),
-            
-            nn.Dropout(dropout),
-            nn.Linear(256, 128), # 256 → 128                
-            nn.LayerNorm(128),
-            nn.ReLU(inplace=True),
-            
-            nn.Dropout(dropout),
-            nn.Linear(128, num_classes) # 128 → 8
-        )
+        # Paper: "h_t^group is fed to a softmax classification layer"
+        # (the former 500 → 256 → 128 MLP with LayerNorm stalled training
+        #  when stacked on the linear 3000 projection)
+        self.classifier = nn.Linear(classifier_input, num_classes)  # 500 → 8
 
 
     def train(self, mode=True):
