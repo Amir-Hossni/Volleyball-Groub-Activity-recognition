@@ -65,7 +65,7 @@ train_dataset = VolleyballDataset(
     split_ids=train_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_frames",
+    mode="clip_frames_players",
     transform=transform
 )
 
@@ -76,7 +76,7 @@ val_dataset = VolleyballDataset(
     split_ids=val_ids,
     scene_to_idx=scene_to_idx,
     player_to_idx=player_to_idx,
-    mode="person_frames",
+    mode="clip_frames_players",
     transform=transform
 )
 
@@ -229,7 +229,7 @@ backboneB6 = copy.deepcopy(backboneB3)
 model_B6 = B6GroupActivityClassifier(backbone=backboneB6)
 
 
-model = person_model
+model = model_B6        
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
     model = torch.nn.DataParallel(model)
@@ -432,13 +432,7 @@ trainer_Baseline6 = Trainer(
 
 if __name__ == "__main__":
 
-    # Expected: frames 19368 / 12069, crops 231327 / 143829
-    print(
-        f"B3 stage A frames: train {len(train_dataset)} | val {len(val_dataset)} | "
-        f"crops: train {sum(len(s['boxes']) for s in train_dataset.samples)} | "
-        f"val {sum(len(s['boxes']) for s in val_dataset.samples)}"
-    )
-
-    trainer_b3_stage1.fit(train_loader, val_loader)
+    
+    trainer_Baseline6.fit(train_loader, val_loader)
    
     

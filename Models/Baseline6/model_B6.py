@@ -30,7 +30,7 @@ class B6GroupActivityClassifier(nn.Module):
         backbone,
         num_classes=8,
         hidden_dim=500,
-        dropout=0.2,
+        dropout=0.3,
     ):
         super().__init__()
 
@@ -87,6 +87,7 @@ class B6GroupActivityClassifier(nn.Module):
             nn.LayerNorm(128),
             nn.ReLU(inplace=True),
             
+            nn.Dropout(dropout),
             nn.Linear(128, num_classes) # 128 → 8
         )
 
