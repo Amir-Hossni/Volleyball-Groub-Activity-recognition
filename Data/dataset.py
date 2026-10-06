@@ -384,6 +384,31 @@ class VolleyballDataset(Dataset):
         x1, y1, x2, y2 = box.box
         return image.crop((x1, y1, x2, y2))
 
+    def _team_ids(self, frame_boxes):
+        """ Team per player slot from court side (B8 team pooling).
+
+            Players are ranked by their mean box center-x over the clip:
+            the P // 2 leftmost -> 0 (left team), the rest -> 1 (right team).
+            Absent players -> -1.
+
+            Output:
+            team [12] """
+        centers = {}
+        for boxes in frame_boxes.values():
+            for box in boxes:
+                x1, _, x2, _ = box.box
+                centers.setdefault(box.player_ID, []).append((x1 + x2) / 2)
+
+        team = torch.full((12,), -1, dtype=torch.long)
+        ranked = sorted(
+            (pid for pid in centers if pid < 12),
+            key=lambda pid: sum(centers[pid]) / len(centers[pid]),
+        )
+        for rank, pid in enumerate(ranked):
+            team[pid] = 0 if rank < len(ranked) // 2 else 1
+
+        return team
+
     def __getitem__(self, index):
         sample = self.samples[index]
 
@@ -597,6 +622,8 @@ class VolleyballDataset(Dataset):
                 "images": player_images,
                 "mask": player_mask,
                 "scene_label": sample["scene_label"],
+                # B8: team per player slot (0 = left, 1 = right, -1 = absent)
+                "team": self._team_ids(frame_boxes),
             }
        
         # B5/ B7

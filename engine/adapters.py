@@ -19,9 +19,15 @@ def identity_adapter(batch, input_key="images", target_key="scene_label", mask=N
         player_mask = inputs.abs().sum(dim=(2, 3, 4, 5)) > 0
         return inputs, targets, player_mask
     #B6
-    elif mask == "mask":    
+    elif mask == "mask":
         mask = inputs.abs().sum(dim=(3, 4, 5)) > 0
         return inputs, targets, mask
+    #B8: one (B,T,P) tensor -> team id per real player, -1 for missing
+    elif mask == "team":
+        mask = inputs.abs().sum(dim=(3, 4, 5)) > 0
+        team_mask = batch["team"][:, None, :].expand_as(mask).clone()
+        team_mask[~mask] = -1
+        return inputs, targets, team_mask
 
     return inputs, targets
 
