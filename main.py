@@ -465,7 +465,7 @@ trainer_Baseline6 = Trainer(
 
 
 trainer_Baseline7 = Trainer(
-    model=model_B7,
+    model=model,
     optimizer=optimizer,
     criterion=criterion,
     device=device,
