@@ -256,6 +256,9 @@ model_B7 = B7HierarchicalClassifier(
     group_feature_dim=3000,
     hidden_dim=500,
     feature_dropout=0.0,
+    use_player_proj=True,
+    pool="max_mean",
+    scene_head="conv",
 )
 model = model_B7
        
@@ -322,6 +325,63 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 #     T_max=50,
 #     eta_min=1e-6
 # )
+
+
+# Baseline7-only training setup (B7 improvements, paper-compatible)
+# Other baselines keep using criterion / optimizer / scheduler above.
+#   - Differential LRs: pretrained LSTM1 at 1e-4, fresh scene modules at 1e-3
+#   - Class-weighted loss (rare group activities, e.g. winpoint)
+#   - Label smoothing 0.01 (Omar B7 setting)
+#   - Cosine schedule on the joint optimizer
+model_B7.unfreeze_person_lstm()
+
+_scene_params = (
+    list(model_B7.group_norm.parameters())
+    + list(model_B7.group_projection.parameters())
+    + list(model_B7.lstm.parameters())
+    + list(model_B7.classifier.parameters())
+)
+if model_B7.use_player_proj:
+    _scene_params += list(model_B7.player_proj.parameters())
+if model_B7.scene_head == "conv":
+    _scene_params += (
+        list(model_B7.scene_skip_proj.parameters())
+        + list(model_B7.scene_conv1.parameters())
+        + list(model_B7.scene_conv2.parameters())
+    )
+
+_person_params = list(model_B7.person_model.lstm.parameters())
+
+_train_labels = torch.tensor(
+    [s["scene_label"] for s in train_dataset.samples],
+    dtype=torch.long,
+)
+_num_B7 = model_B7.classifier.out_features
+_class_counts = torch.bincount(_train_labels, minlength=_num_B7).float()
+_class_weights = torch.ones(_num_B7)
+_present = _class_counts > 0
+_class_weights[_present] = (
+    len(_train_labels) / (_present.sum().float() * _class_counts[_present])
+)
+
+criterion_B7 = nn.CrossEntropyLoss(
+    weight=_class_weights,
+    label_smoothing=0.01,
+)
+
+optimizer_B7 = torch.optim.AdamW(
+    [
+        {"params": _person_params, "lr": 1e-4},
+        {"params": _scene_params, "lr": 1e-3},
+    ],
+    weight_decay=5e-4,
+)
+
+scheduler_B7 = torch.optim.lr_scheduler.CosineAnnealingLR(
+    optimizer_B7,
+    T_max=50,
+    eta_min=1e-6,
+)
 
 
 
@@ -465,9 +525,9 @@ trainer_Baseline6 = Trainer(
 
 
 trainer_Baseline7 = Trainer(
-    model=model,
-    optimizer=optimizer,
-    criterion=criterion,
+    model=model_B7,
+    optimizer=optimizer_B7,
+    criterion=criterion_B7,
     device=device,
     adapter=lambda batch: identity_adapter(
         batch,
@@ -481,8 +541,8 @@ trainer_Baseline7 = Trainer(
     log_name="Baseline7",
     epochs=50,
     use_amp=True,
-    grad_clip=None,
-    scheduler=scheduler
+    grad_clip=1.0,
+    scheduler=scheduler_B7
 )
 
 if __name__ == "__main__":

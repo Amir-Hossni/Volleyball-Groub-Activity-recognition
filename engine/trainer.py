@@ -324,7 +324,14 @@ class Trainer:
                 )
 
                 if self.scheduler is not None:
-                    self.scheduler.step(val_loss)
+                    if isinstance(
+                        self.scheduler,
+                        torch.optim.lr_scheduler.ReduceLROnPlateau,
+                    ):
+                        self.scheduler.step(val_loss)
+                    else:
+                        # e.g. CosineAnnealingLR steps once per epoch
+                        self.scheduler.step()
                 
                 if early_stopped:
                     break
