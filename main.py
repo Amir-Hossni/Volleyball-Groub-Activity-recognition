@@ -269,7 +269,7 @@ model = model_B7
        
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
-    model = torch.nn.DataParallel(model_B6)
+    model = torch.nn.DataParallel(model)
     
 
 
