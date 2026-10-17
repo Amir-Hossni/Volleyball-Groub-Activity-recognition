@@ -54,6 +54,7 @@ class B7HierarchicalClassifier(nn.Module):
         use_player_proj=False,
         pool="max",
         scene_head="last",
+        backbone_chunk=256,
     ):
         super().__init__()
 
@@ -66,6 +67,11 @@ class B7HierarchicalClassifier(nn.Module):
 
         self.person_model.eval()
         self.person_trainable = False
+
+        # Chunked frozen-backbone inference: peak activation memory grows
+        # with the number of valid crops forwarded at once (up to B*T*P).
+        # 256 keeps a 14-16 GiB GPU safe without changing numerics.
+        self.backbone_chunk = int(backbone_chunk)
 
 
         # Feature dimensions
@@ -204,6 +210,20 @@ class B7HierarchicalClassifier(nn.Module):
         return self
 
 
+    def backbone_features(self, crops):
+        """Run the frozen backbone in chunks; preserves input order."""
+        feats = []
+        chunk = max(1, self.backbone_chunk)
+        with torch.no_grad():
+            for i in range(0, crops.shape[0], chunk):
+                feats.append(
+                    self.person_model.backbone(
+                        crops[i:i + chunk]
+                    ).flatten(1)
+                )
+        return torch.cat(feats, dim=0) if feats else None
+
+
     def player_representations(self, x, mask):
         """
         Args:
@@ -223,11 +243,14 @@ class B7HierarchicalClassifier(nn.Module):
         flat_x = x.reshape(B * T * P, C, H, W)
         flat_mask = mask.reshape(B * T * P)
 
-        with torch.no_grad():
+        valid_x = flat_x[flat_mask]
 
-            valid_features = self.person_model.backbone(
-                flat_x[flat_mask]
-            ).flatten(1)
+        if valid_x.shape[0] == 0:
+            valid_features = torch.zeros(
+                0, self.player_feature_dim, device=x.device
+            )
+        else:
+            valid_features = self.backbone_features(valid_x)
 
 
         #  Restore missing crops as zero vectors

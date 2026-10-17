@@ -21,7 +21,6 @@ from Models.Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Models.Baseline4.model_B4 import TemporalImageClassifierB4
 from Models.Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5
 from Models.Baseline6.model_B6 import B6GroupActivityClassifier
-from Models.Baseline7.model_B7 import B7HierarchicalClassifier
 
 
 
@@ -229,44 +228,14 @@ backboneB6 = copy.deepcopy(backboneB3)
 
 model_B6 = B6GroupActivityClassifier(backbone=backboneB6)
 
-#Baseline7
-# Stage-1 person model (frozen B3 backbone + LSTM1), then group stage on top
-backboneB7 = copy.deepcopy(backboneB3)
 
-model_B5_for_B7 = PersonTemporalB5(
-    backbone=backboneB7,
-    num_classes=len(player_to_idx),
-    lstm_hidden=512,
-    lstm_layers=1,
-    dropout=0.2
-)
-
-checkpoint = torch.load(
-    "/kaggle/working/best_Baseline5_stage1.pth",
-    map_location=device
-)
-
-model_B5_for_B7.load_state_dict(
-    checkpoint["model_state_dict"]
-)
-
-model_B7 = B7HierarchicalClassifier(
-    person_model=model_B5_for_B7,
-    num_classes=len(scene_to_idx),
-    group_feature_dim=3000,
-    hidden_dim=500,
-    feature_dropout=0.0,
-    use_player_proj=True,
-    pool="max_mean",
-    scene_head="conv",
-)
-model = model_B7
+model = model_B6
        
        
        
 if torch.cuda.device_count() > 1:
     print("Using DataParallel")
-    model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model_B6)
     
 
 
@@ -276,21 +245,22 @@ model = model.to(device)
 
 # B3 stage A retrain: all 9 frames per clip (mode="person")
 # fresh ImageNet init, own optimizer/loss — B6 settings below stay untouched
-b3_stageA_model = PersonClassifierB3(
-    num_classes=len(player_to_idx),
-    pretrained=True
-)
-if torch.cuda.device_count() > 1:
-    b3_stageA_model = torch.nn.DataParallel(b3_stageA_model)
 
-b3_stageA_model = b3_stageA_model.to(device)
+# b3_stageA_model = PersonClassifierB3(
+#     num_classes=len(player_to_idx),
+#     pretrained=True
+# )
+# if torch.cuda.device_count() > 1:
+#     b3_stageA_model = torch.nn.DataParallel(b3_stageA_model)
 
-b3_stageA_criterion = nn.CrossEntropyLoss()
+# b3_stageA_model = b3_stageA_model.to(device)
 
-b3_stageA_optimizer = torch.optim.AdamW(
-    b3_stageA_model.parameters(),
-    lr=1e-4
-)
+# b3_stageA_criterion = nn.CrossEntropyLoss()
+
+# b3_stageA_optimizer = torch.optim.AdamW(
+#     b3_stageA_model.parameters(),
+#     lr=1e-4
+# )
 
 
 # Loss
@@ -327,64 +297,6 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 # )
 
 
-# Baseline7-only training setup (B7 improvements, paper-compatible)
-# Other baselines keep using criterion / optimizer / scheduler above.
-#   - Differential LRs: pretrained LSTM1 at 1e-4, fresh scene modules at 1e-3
-#   - Class-weighted loss (rare group activities, e.g. winpoint)
-#   - Label smoothing 0.01 (Omar B7 setting)
-#   - Cosine schedule on the joint optimizer
-model_B7.unfreeze_person_lstm()
-
-_scene_params = (
-    list(model_B7.group_norm.parameters())
-    + list(model_B7.group_projection.parameters())
-    + list(model_B7.lstm.parameters())
-    + list(model_B7.classifier.parameters())
-)
-if model_B7.use_player_proj:
-    _scene_params += list(model_B7.player_proj.parameters())
-if model_B7.scene_head == "conv":
-    _scene_params += (
-        list(model_B7.scene_skip_proj.parameters())
-        + list(model_B7.scene_conv1.parameters())
-        + list(model_B7.scene_conv2.parameters())
-    )
-
-_person_params = list(model_B7.person_model.lstm.parameters())
-
-_train_labels = torch.tensor(
-    [s["scene_label"] for s in train_dataset.samples],
-    dtype=torch.long,
-)
-_num_B7 = model_B7.classifier.out_features
-_class_counts = torch.bincount(_train_labels, minlength=_num_B7).float()
-_class_weights = torch.ones(_num_B7)
-_present = _class_counts > 0
-_class_weights[_present] = (
-    len(_train_labels) / (_present.sum().float() * _class_counts[_present])
-)
-
-criterion_B7 = nn.CrossEntropyLoss(
-    weight=_class_weights,
-    label_smoothing=0.01,
-)
-
-optimizer_B7 = torch.optim.AdamW(
-    [
-        {"params": _person_params, "lr": 1e-4},
-        {"params": _scene_params, "lr": 1e-3},
-    ],
-    weight_decay=5e-4,
-)
-
-scheduler_B7 = torch.optim.lr_scheduler.CosineAnnealingLR(
-    optimizer_B7,
-    T_max=50,
-    eta_min=1e-6,
-)
-
-
-
 #Trainer
 ############################
 trainer_Baseline1 = Trainer(
@@ -407,20 +319,20 @@ trainer_Baseline1 = Trainer(
 )
 
 
-trainer_b3_stage1 = Trainer(
-    model=b3_stageA_model,
-    optimizer=b3_stageA_optimizer,
-    criterion=b3_stageA_criterion,
-    device=device,
-    adapter=flatten_person_batch,
-    num_classes=len(player_to_idx),
-    save_path="/kaggle/working/best_B3_person_stage1_v2.pth",
-    class_names=list(player_to_idx),
-    log_name="B3_person_stage1_v2",
-    epochs=5,
-    use_amp=True,
-    grad_clip=None,
-)
+# trainer_b3_stage1 = Trainer(
+#     model=b3_stageA_model,
+#     optimizer=b3_stageA_optimizer,
+#     criterion=b3_stageA_criterion,
+#     device=device,
+#     adapter=flatten_person_batch,
+#     num_classes=len(player_to_idx),
+#     save_path="/kaggle/working/best_B3_person_stage1_v2.pth",
+#     class_names=list(player_to_idx),
+#     log_name="B3_person_stage1_v2",
+#     epochs=5,
+#     use_amp=True,
+#     grad_clip=None,
+# )
 
 trainer_b3_stage2 = Trainer(
     model=model,
@@ -524,30 +436,9 @@ trainer_Baseline6 = Trainer(
 )
 
 
-trainer_Baseline7 = Trainer(
-    model=model_B7,
-    optimizer=optimizer_B7,
-    criterion=criterion_B7,
-    device=device,
-    adapter=lambda batch: identity_adapter(
-        batch,
-        input_key="images",
-        target_key="scene_label",
-        mask="mask"
-    ),
-    num_classes=len(scene_to_idx),
-    save_path="/kaggle/working/best_Baseline7.pth",
-    class_names=list(scene_to_idx),
-    log_name="Baseline7",
-    epochs=50,
-    use_amp=True,
-    grad_clip=1.0,
-    scheduler=scheduler_B7
-)
-
 if __name__ == "__main__":
 
     
-    trainer_Baseline7.fit(train_loader, val_loader)
+    trainer_Baseline6.fit(train_loader, val_loader)
    
     
