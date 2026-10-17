@@ -21,6 +21,7 @@ from Models.Baseline3.model_B3 import PersonClassifierB3, GroupClassifierB3
 from Models.Baseline4.model_B4 import TemporalImageClassifierB4
 from Models.Baseline5.model_B5 import GroupTemporalClassifierB5 , PersonTemporalB5
 from Models.Baseline6.model_B6 import B6GroupActivityClassifier
+from Models.Baseline7.model_B7 import B7HierarchicalClassifier
 
 
 
@@ -91,7 +92,7 @@ val_dataset = VolleyballDataset(
 # # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
-    batch_size=8,
+    batch_size=16,
     shuffle=True,
     num_workers=4,
     pin_memory=True,
@@ -101,7 +102,7 @@ train_loader = DataLoader(
 
 val_loader = DataLoader(
     dataset=val_dataset,
-    batch_size=8,
+    batch_size=16,
     shuffle=False,
     num_workers=4,
     pin_memory=True,
@@ -229,7 +230,40 @@ backboneB6 = copy.deepcopy(backboneB3)
 model_B6 = B6GroupActivityClassifier(backbone=backboneB6)
 
 
-model = model_B6
+#Baseline7
+# Stage-1 person model (frozen B3 backbone + LSTM1), then group stage on top
+backboneB7 = copy.deepcopy(backboneB3)
+
+model_B5_for_B7 = PersonTemporalB5(
+    backbone=backboneB7,
+    num_classes=len(player_to_idx),
+    lstm_hidden=512,
+    lstm_layers=1,
+    dropout=0.2
+)
+
+checkpoint = torch.load(
+    "/kaggle/working/best_Baseline5_stage1.pth",
+    map_location=device
+)
+
+model_B5_for_B7.load_state_dict(
+    checkpoint["model_state_dict"]
+)
+
+model_B7 = B7HierarchicalClassifier(
+    person_model=model_B5_for_B7,
+    num_classes=len(scene_to_idx),
+    group_feature_dim=3000,
+    hidden_dim=500,
+    feature_dropout=0.0,
+    use_player_proj=True,
+    pool="max_mean",
+    scene_head="conv",
+)
+
+
+model = model_B7
        
        
        
@@ -436,9 +470,31 @@ trainer_Baseline6 = Trainer(
 )
 
 
+trainer_Baseline7 = Trainer(
+    model=model_B7,
+    optimizer=optimizer,
+    criterion=criterion,
+    device=device,
+    adapter=lambda batch: identity_adapter(
+        batch,
+        input_key="images",
+        target_key="scene_label",
+        mask="mask"
+    ),
+    num_classes=len(scene_to_idx),
+    save_path="/kaggle/working/best_Baseline7.pth",
+    class_names=list(scene_to_idx),
+    log_name="Baseline7",
+    epochs=50,
+    use_amp=True,
+    grad_clip=1.0,
+    scheduler=scheduler    
+)
+
+
 if __name__ == "__main__":
 
     
-    trainer_Baseline6.fit(train_loader, val_loader)
+    trainer_Baseline7.fit(train_loader, val_loader)
    
     
