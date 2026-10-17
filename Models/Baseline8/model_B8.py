@@ -19,11 +19,13 @@ class B8TeamHierarchicalClassifier(B7HierarchicalClassifier):
 
         Player crops
             ↓
-        Frozen B3 ResNet50 + LSTM1      P_t^k : 2048 + H1 = 2560
+        Frozen B3 ResNet50 + LSTM1      P_t^k : pooled from 2048 + H1
+            (raw Eq. 7 concat, or H1 + H1 with use_player_proj)
             ↓
-        Max over left team  ⊕  Max over right team
+        Pool per team (one B7 pool each side, no cross-team mixing) ⊕
+            max (default) or max||mean with pool="max_mean"
             ↓
-        Z_t : 2 × 2560 = 5120
+        Z_t : 2 × pooled_dim
             ↓
         LayerNorm (added for stability, not in the paper)
             ↓
@@ -31,7 +33,9 @@ class B8TeamHierarchicalClassifier(B7HierarchicalClassifier):
             ↓
         Group LSTM (LSTM2): 500
             ↓
-        Linear 500 → 8 (softmax)
+        Scene head: last (paper) / mean / conv (Omar-style)
+            ↓
+        Linear → 8 (softmax)
 
         Teams come from the dataset ("team": players ranked by box
         center-x, left half = 0, right half = 1) and reach the model through
@@ -45,6 +49,9 @@ class B8TeamHierarchicalClassifier(B7HierarchicalClassifier):
         group_feature_dim=3000,
         hidden_dim=500,
         feature_dropout=0.0,
+        use_player_proj=False,
+        pool="max",
+        scene_head="last",
     ):
         super().__init__(
             person_model=person_model,
@@ -52,17 +59,22 @@ class B8TeamHierarchicalClassifier(B7HierarchicalClassifier):
             group_feature_dim=group_feature_dim,
             hidden_dim=hidden_dim,
             feature_dropout=feature_dropout,
+            use_player_proj=use_player_proj,
+            pool=pool,
+            scene_head=scene_head,
         )
 
 
         # Two teams concatenated -> group feature doubles
 
-        self.group_norm = nn.LayerNorm(2 * self.player_repr_dim)   # 5120
+        self.team_pooled_dim = 2 * self.pooled_dim
+
+        self.group_norm = nn.LayerNorm(self.team_pooled_dim)
 
         # Paper: 3000-node fully connected layer
 
         self.group_projection = nn.Linear(
-            2 * self.player_repr_dim,    # 5120
+            self.team_pooled_dim,
             self.group_feature_dim,      # 3000
         )
 
@@ -89,12 +101,13 @@ class B8TeamHierarchicalClassifier(B7HierarchicalClassifier):
         player_repr = self.player_representations(x, mask)       # (B,T,P,2560)
 
 
-        #  Team pooling per frame
-        # (B,T,P,2560) -> left (B,T,2560) ⊕ right (B,T,2560)
+        #  Team pooling per frame (two groups, journal extension)
+        # (B,T,P,D) -> left (B,T,D') ⊕ right (B,T,D')
+        # D' = D with pool="max", 2*D with pool="max_mean"
 
-        left = self.masked_max(player_repr, mask & (team_mask == 0))
-        right = self.masked_max(player_repr, mask & (team_mask == 1))
+        left = self.pool_players(player_repr, mask & (team_mask == 0))
+        right = self.pool_players(player_repr, mask & (team_mask == 1))
 
-        group_features = torch.cat([left, right], dim=-1)        # (B,T,5120)
+        group_features = torch.cat([left, right], dim=-1)        # (B,T,2*D')
 
         return self.classify_group(group_features)               # (B,8)

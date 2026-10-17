@@ -92,7 +92,7 @@ val_dataset = VolleyballDataset(
 # # DataLoader
 train_loader = DataLoader(
     dataset=train_dataset,
-    batch_size=16,
+    batch_size=8,
     shuffle=True,
     num_workers=4,
     pin_memory=True,
@@ -102,7 +102,7 @@ train_loader = DataLoader(
 
 val_loader = DataLoader(
     dataset=val_dataset,
-    batch_size=16,
+    batch_size=8,
     shuffle=False,
     num_workers=4,
     pin_memory=True,
