@@ -7,41 +7,22 @@ import torch.nn as nn
 class B7HierarchicalClassifier(nn.Module):
     """
         B7: Two-stage hierarchical model (full model, one group)
-        Ibrahim et al., CVPR 2016 — Sec. 3.2 / 3.3, Eq. 7–8
 
-        Stage 1 (trained before, person actions):
-            PersonTemporalB5 = frozen B3 ResNet50 + LSTM1 (9 classes)
-
-        Stage 2 (this model, group activity):
-
-        Player crops
+        Frozen B3 ResNet50 + LSTM1 (Stage 1, person actions)
             ↓
-        Frozen B3 ResNet50            x_t^k : 2048
+        Player Representations: 2048 + H1 (raw) or H1 + H1 (projected)
             ↓
-        LSTM1 over time, per player   h_t^k : H1 (512)
+        Pooling over Players (one group)
             ↓
-        P_t^k : raw concat 2048 + H1 (paper Eq. 7, default)
-                or projected concat H1 + H1 with use_player_proj
-            ↓
-        Pooling over all Players (one group, paper Eq. 8):
-            max (default) or max||mean with pool="max_mean"
+        Group Feature: pooled_dim
             ↓
         Group Feature Projection: pooled_dim → 3000
             ↓
         Group LSTM (LSTM2): 3000 → 500
             ↓
-        Scene head: last (paper) / mean / conv (Omar-style)
-            ↓
         Group Activity Classifier
             ↓
         8 Group Activity Classes
-
-        Paper Eq. 7: P_t^k = x_t^k ⊕ h_t^k
-        Paper Eq. 8: Z_t = max over K players
-
-        LSTM1 starts frozen (paper: stage-wise training).
-        unfreeze_person_lstm() opens it for an optional joint fine-tune
-        with a lower learning rate.
     """
     def __init__(
 
@@ -68,9 +49,8 @@ class B7HierarchicalClassifier(nn.Module):
         self.person_model.eval()
         self.person_trainable = False
 
-        # Chunked frozen-backbone inference: peak activation memory grows
-        # with the number of valid crops forwarded at once (up to B*T*P).
-        # 256 keeps a 14-16 GiB GPU safe without changing numerics.
+
+        # Chunked frozen-backbone inference.
         self.backbone_chunk = int(backbone_chunk)
 
 
@@ -78,11 +58,10 @@ class B7HierarchicalClassifier(nn.Module):
         self.player_feature_dim = 2048
         self.person_hidden_dim = self.person_model.lstm.hidden_size        # H1
 
+
         # Player representation size
-        # B7 default: raw concat (paper Eq. 7)
-        #   P = x (2048) + h (H1)
-        # With player projection (Omar-style, B7-compatible):
-        #   P = proj(x) (H1) + h (H1) = 2 * H1
+        #   raw concat: x (2048) + h (H1)
+        #   projected : proj(x) (H1) + h (H1) = 2 * H1
         self.use_player_proj = use_player_proj
         if self.use_player_proj:
             self.player_proj = nn.Linear(
@@ -102,7 +81,7 @@ class B7HierarchicalClassifier(nn.Module):
         self.feature_dropout = nn.Dropout(feature_dropout)
 
 
-        # Player pooling over all players (one group, paper Eq. 8)
+        # Player pooling over all players (one group)
         # "max"         -> D
         # "max_mean"    -> 2 * D  (max || mean, no team split)
         if pool not in ("max", "max_mean"):
@@ -144,17 +123,17 @@ class B7HierarchicalClassifier(nn.Module):
 
 
         # Group classifier
-        # "last" : paper head on LSTM2 last step        -> 500
-        # "mean" : mean over LSTM2 steps                -> 500
-        # "conv" : Omar-style time concat + Conv1d      -> hidden_dim // 4
+        # "last" : head on LSTM2 last step   -> 500
+        # "mean" : head on LSTM2 mean        -> 500
+        # "conv" : time concat + Conv1d      -> hidden_dim // 4
         if scene_head not in ("last", "mean", "conv"):
             raise ValueError("scene_head must be 'last', 'mean' or 'conv'")
 
         self.scene_head = scene_head
 
         if scene_head == "conv":
-            # Scene skip: project pooled Z_t to LSTM width, concat with
-            # LSTM2 outputs on the TIME axis -> (B, 2T, H2), then a
+            # Scene head: project pooled features to LSTM width, concat
+            # with LSTM2 outputs on the TIME axis -> (B, 2T, H2), then a
             # two-stage Conv1d with global kernel 2T collapses time.
             self.scene_skip_proj = nn.Linear(
                 self.group_feature_dim,      # 3000
@@ -178,7 +157,20 @@ class B7HierarchicalClassifier(nn.Module):
             classifier_input = self.hidden_dim         # 500
 
         # Paper: "h_t^group is fed to a softmax classification layer"
-        self.classifier = nn.Linear(classifier_input, num_classes)
+        self.classifier = nn.Linear(classifier_input, num_classes)  # 500 → 8
+
+
+    def train(self, mode=True):
+
+        super().train(mode)
+
+        # Keep frozen B3 backbone in eval mode.
+        self.person_model.backbone.eval()
+
+        if not self.person_trainable:
+            self.person_model.eval()
+
+        return self
 
 
     def unfreeze_person_lstm(self):
@@ -197,21 +189,9 @@ class B7HierarchicalClassifier(nn.Module):
         return params
 
 
-    def train(self, mode=True):
-
-        super().train(mode)
-
-        # Frozen parts stay in eval mode.
-        self.person_model.backbone.eval()
-
-        if not self.person_trainable:
-            self.person_model.eval()
-
-        return self
-
-
     def backbone_features(self, crops):
-        """Run the frozen backbone in chunks; preserves input order."""
+        #  Frozen backbone in chunks:
+        # (N,C,H,W) -> (N,2048), order preserved
         feats = []
         chunk = max(1, self.backbone_chunk)
         with torch.no_grad():
@@ -225,23 +205,20 @@ class B7HierarchicalClassifier(nn.Module):
 
 
     def player_representations(self, x, mask):
-        """
-        Args:
-            x    : (B,T,P,C,H,W)
-            mask : (B,T,P)  True = real player
-
-        Returns:
-            P_t^k = x_t^k ⊕ h_t^k : (B,T,P,2048+H1)
-        """
+        #  Player representations:
+        # (B,T,P,C,H,W) + (B,T,P) -> (B,T,P,D)
 
         B, T, P, C, H, W = x.shape
 
 
-        #  Frozen B3 ResNet50 on real crops only
-        # (B*T*P,C,H,W) -> (N_valid,2048)
+        #  Flatten all player crops:
+        # (B,T,P,C,H,W) -> (B*T*P,C,H,W)
 
         flat_x = x.reshape(B * T * P, C, H, W)
         flat_mask = mask.reshape(B * T * P)
+
+
+        # Keep only real player crops.
 
         valid_x = flat_x[flat_mask]
 
@@ -253,7 +230,7 @@ class B7HierarchicalClassifier(nn.Module):
             valid_features = self.backbone_features(valid_x)
 
 
-        #  Restore missing crops as zero vectors
+        #  Restore missing crops as zero vectors:
         # (B*T*P,2048) -> (B,T,P,2048)
 
         features = torch.zeros(
@@ -266,6 +243,9 @@ class B7HierarchicalClassifier(nn.Module):
         features[flat_mask] = valid_features
 
         features = features.reshape(B, T, P, self.player_feature_dim)
+
+
+        # Feature dropout
 
         features = self.feature_dropout(features)
 
@@ -298,33 +278,37 @@ class B7HierarchicalClassifier(nn.Module):
         hidden = hidden.reshape(B, P, T, -1).permute(0, 2, 1, 3)
 
 
+        #  Player representations:
+        # raw concat: x ⊕ h  /  projected: proj(x) ⊕ h
+
         if self.use_player_proj:
-            # Omar-style player skip: project raw CNN features to H1,
-            # then concat with LSTM1 output -> (B,T,P,2*H1)
+            proj_in = features.reshape(B * T * P, self.player_feature_dim)
             with torch.set_grad_enabled(self.person_trainable and torch.is_grad_enabled()):
-                proj_in = features.reshape(B * T * P, self.player_feature_dim)
                 proj_out = self.player_proj(proj_in).reshape(B, T, P, -1)
 
             return torch.cat([proj_out, hidden], dim=-1)
 
-        # Paper Eq. 7: P_t^k = x_t^k ⊕ h_t^k
-
         return torch.cat([features, hidden], dim=-1)
+
+        # (B,T,P,D)
 
 
     @staticmethod
     def masked_max(player_repr, mask):
-        """
-        Paper Eq. 8: max pooling over the selected players.
-
-        (B,T,P,D) + (B,T,P) -> (B,T,D)
-        A frame with no selected player gives a zero vector.
-        """
+        #  Player Max Pooling
+        #
+        # (B,T,P,D)
+        #        ↓ max over P
+        # (B,T,D)
 
         pooled = player_repr.masked_fill(
             ~mask.unsqueeze(-1),
             float("-inf")
         ).max(dim=2).values
+
+
+        # If a frame has no valid players,
+        # replace -inf with zero.
 
         return torch.where(
             torch.isinf(pooled),
@@ -335,12 +319,11 @@ class B7HierarchicalClassifier(nn.Module):
 
     @staticmethod
     def masked_mean(player_repr, mask):
-        """
-        Mean pooling over the selected players.
-
-        (B,T,P,D) + (B,T,P) -> (B,T,D)
-        A frame with no selected player gives a zero vector.
-        """
+        #  Player Mean Pooling
+        #
+        # (B,T,P,D)
+        #        ↓ mean over P
+        # (B,T,D)
 
         masked = player_repr.masked_fill(
             ~mask.unsqueeze(-1),
@@ -357,12 +340,10 @@ class B7HierarchicalClassifier(nn.Module):
 
 
     def pool_players(self, player_repr, mask):
-        """
-        Pool over all players (one group, no team split).
-
-        "max"      -> (B,T,D)
-        "max_mean" -> (B,T,2*D)  (max || mean)
-        """
+        #  Player Pooling (one group)
+        #
+        # "max"      -> (B,T,D)
+        # "max_mean" -> (B,T,2*D)  (max || mean)
 
         pooled_max = self.masked_max(player_repr, mask)
 
@@ -375,27 +356,50 @@ class B7HierarchicalClassifier(nn.Module):
 
 
     def classify_group(self, group_features):
-        """
-        (B,T,D) -> LayerNorm -> FC 3000 -> LSTM2 500 -> head -> (B,8)
-
-        "last" : paper head on LSTM2 last step
-        "mean" : mean over LSTM2 steps
-        "conv" : Omar-style time concat + Conv1d fusion
-        """
+        #  Group feature projection
+        #
+        # (B,T,pooled_dim)
+        #      ↓
+        # (B,T,3000)
 
         group_features = self.group_norm(group_features)
 
         projected = self.group_projection(group_features)   # (B,T,3000)
 
+
+        #  Group LSTM = LSTM 2
+        #
+        # (B,T,3000)
+        #      ↓
+        # (B,T,500)
+
         out, _ = self.lstm(projected)                        # (B,T,500)
 
+
+        #  Final group classification
+
         if self.scene_head == "last":
-            return self.classifier(out[:, -1, :])            # (B,8)
+
+            # Use final group LSTM representation.
+
+            final_feature = out[:, -1, :]                    # (B,500)
+
+            logits = self.classifier(final_feature)          # (B,8)
+
+            return logits
 
         if self.scene_head == "mean":
-            return self.classifier(out.mean(dim=1))          # (B,8)
 
-        # Omar-style scene fusion:
+            # Use mean group LSTM representation.
+
+            mean_feature = out.mean(dim=1)                    # (B,500)
+
+            logits = self.classifier(mean_feature)           # (B,8)
+
+            return logits
+
+
+        # Scene head fusion:
         # LSTM2 outputs (B,T,500) || projected scene (B,T,500)
         #   -> (B,2T,500) -> Conv1d -> (B,125) -> classifier
         skip = self.scene_skip_proj(projected)               # (B,T,500)
@@ -406,7 +410,9 @@ class B7HierarchicalClassifier(nn.Module):
         fused = torch.relu(self.scene_conv1(fused))          # (B,250,2T)
         fused = self.scene_conv2(fused)                      # (B,125,1)
 
-        return self.classifier(fused.squeeze(-1))            # (B,8)
+        logits = self.classifier(fused.squeeze(-1))          # (B,8)
+
+        return logits
 
 
     def forward(self, x, mask):
@@ -416,7 +422,7 @@ class B7HierarchicalClassifier(nn.Module):
               (B,T,P,C,H,W)
 
                 Example:
-                (8,9,12,3,224,224)
+                (4,9,12,3,224,224)
 
             mask:
                 (B,T,P)
@@ -428,8 +434,67 @@ class B7HierarchicalClassifier(nn.Module):
                 (B,8)
         """
 
-        player_repr = self.player_representations(x, mask)
+
+        B, T, P, C, H, W = x.shape
+
+
+        #  Flatten all player crops:
+        # (B,T,P,C,H,W) -> (B*T*P,C,H,W)
+
+        flat_x = x.reshape(
+            B * T * P,
+            C,
+            H,
+            W
+        )
+
+
+        # Flatten mask using the same ordering.
+
+        flat_mask = mask.reshape(
+            B * T * P
+        )
+
+
+        # Keep only real player crops.
+
+        valid_x = flat_x[flat_mask]
+
+
+        #  Frozen B3 ResNet50 + LSTM1
+        #
+        # Each real player crop independently becomes (2048),
+        # then LSTM1 runs one track per player over time,
+        # then concat into player representations:
+        #
+        # (B,T,P,D)
+
+        if valid_x.shape[0] == 0:
+            player_repr = torch.zeros(
+                B, T, P, self.player_repr_dim, device=x.device
+            )
+        else:
+            player_repr = self.player_representations(x, mask)
+
+
+        #  Player Pooling (one group)
+        #
+        # (B,T,P,D)
+        #        ↓ pool over P
+        # (B,T,pooled_dim)
 
         group_features = self.pool_players(player_repr, mask)
 
-        return self.classify_group(group_features)           # (B,8)
+
+        #  Group feature projection + LSTM2 + classifier
+        #
+        # (B,T,pooled_dim)
+        #      ↓
+        # (B,8)
+
+        logits = self.classify_group(group_features)
+
+        # (B,8)
+
+
+        return logits
