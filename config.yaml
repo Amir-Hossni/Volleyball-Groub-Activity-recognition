@@ -95,3 +95,51 @@ Data:
       - "46"
       - "49"
       - "51"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Training hyper-parameters
+# ─────────────────────────────────────────────────────────────────────────────
+Training:
+
+  # ── General optimizer (used by B1, B3-S2, B4, B5-S1, B5-S2, B6) ──────────
+  OPTIMIZER:
+    type: "AdamW"
+    lr: 1.0e-4
+    weight_decay: 1.0e-4
+
+  # ── General scheduler (shared by trainers that receive scheduler=) ─────────
+  SCHEDULER:
+    type: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.1
+    patience: 4
+    min_lr: 1.0e-6
+
+  # ── B3 Stage-A (person model, fresh ImageNet init) ─────────────────────────
+  B3_STAGE_A:
+    OPTIMIZER:
+      type: "AdamW"
+      lr: 1.0e-4
+      weight_decay: 0.0
+
+  # ── B7 Phase 1: Linear Probe (group head only, person frozen) ─────────────
+  B7_PROBE:
+    OPTIMIZER:
+      type: "AdamW"
+      lr: 4.0e-4
+      weight_decay: 1.0e-4
+
+  # ── B7 Phase 2: Joint Fine-tune ───────────────────────────────────────────
+  B7_FINETUNE:
+    # Low LR for person-level params (LSTM1 + player_proj)
+    LR_PERSON: 3.0e-5
+    WEIGHT_DECAY_PERSON: 1.0e-4
+    # Higher LR for group-level params
+    LR_GROUP: 3.0e-4
+    WEIGHT_DECAY_GROUP: 1.0e-4
+
+    SCHEDULER:
+      type: "CosineAnnealingLR"
+      T_max: 50
+      eta_min: 1.0e-6

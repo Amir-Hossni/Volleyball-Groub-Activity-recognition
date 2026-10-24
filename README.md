@@ -415,18 +415,42 @@ Data:
 
 ### 8.3 Train
 
-`main.py` builds every model and trainer; the experiment is chosen in its `__main__` block, together with the dataset `mode` that the baseline needs (see [Section 4.2](#42-dataset-modes)).
+`main.py` is the flexible training entry-point for all baselines in the project. You can choose the baseline, the stage, epochs, and batch size via command-line arguments.
 
-```python
-if __name__ == "__main__":
-    trainer_Baseline6.fit(train_loader, val_loader)
-```
+#### Usage Examples
 
 ```bash
-python main.py
+# Train Baseline 7 (Phase 1 probe + Phase 2 fine-tune):
+python main.py --baseline 7
+
+# Train Baseline 7 – Phase 1 only:
+python main.py --baseline 7 --stage 1
+
+# Train Baseline 7 – Phase 2 only (requires Phase-1 or Stage-1 checkpoint):
+python main.py --baseline 7 --stage 2
+
+# Train Baseline 1 (single-frame scene classifier):
+python main.py --baseline 1
+
+# Train Baseline 3 – Stage A only (person model):
+python main.py --baseline 3 --stage A
+
+# Train Baseline 3 – Stage B only (group model, requires Stage-A checkpoint):
+python main.py --baseline 3 --stage B
+
+# Train Baseline 5 – Stage 1 + Stage 2 sequentially:
+python main.py --baseline 5
+
+# Override epochs and batch size at the CLI:
+python main.py --baseline 7 --epochs 30 --batch-size 8
+
+# Use a custom config file:
+python main.py --baseline 7 --config config.yaml
 ```
 
-Checkpoints are written to `/kaggle/working/` and TensorBoard logs to `runs/<experiment>`:
+All hyperparameters (lr, weight_decay, scheduler settings …) live in `config.yaml` under the `Training:` section and can be edited there.
+
+Checkpoints are written to `/kaggle/working/` (or `--output-dir`) and TensorBoard logs to `runs/<experiment>`:
 
 ```bash
 tensorboard --logdir runs
