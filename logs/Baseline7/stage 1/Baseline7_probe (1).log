@@ -1,0 +1,176 @@
+Epoch 1/50
+Train Loss: 1.7022
+Train Accuracy: 39.92%
+Validation Loss: 2.1088
+Validation Accuracy: 34.38%
+Validation F1: 0.2581
+Learning Rate: 0.000400
+Epoch Time: 1129.7 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 2/50
+Train Loss: 1.3162
+Train Accuracy: 45.21%
+Validation Loss: 1.1964
+Validation Accuracy: 47.20%
+Validation F1: 0.4157
+Learning Rate: 0.000400
+Epoch Time: 625.1 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 3/50
+Train Loss: 1.1282
+Train Accuracy: 51.12%
+Validation Loss: 1.3306
+Validation Accuracy: 44.74%
+Validation F1: 0.3715
+Learning Rate: 0.000400
+Epoch Time: 452.7 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 4/50
+Train Loss: 1.1330
+Train Accuracy: 56.04%
+Validation Loss: 1.3111
+Validation Accuracy: 51.38%
+Validation F1: 0.4760
+Learning Rate: 0.000400
+Epoch Time: 398.4 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 5/50
+Train Loss: 0.9587
+Train Accuracy: 62.36%
+Validation Loss: 1.8353
+Validation Accuracy: 40.94%
+Validation F1: 0.3597
+Learning Rate: 0.000400
+Epoch Time: 398.6 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 6/50
+Train Loss: 0.8173
+Train Accuracy: 69.98%
+Validation Loss: 1.3372
+Validation Accuracy: 57.57%
+Validation F1: 0.5644
+Learning Rate: 0.000400
+Epoch Time: 397.6 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 7/50
+Train Loss: 0.7241
+Train Accuracy: 73.84%
+Validation Loss: 1.6015
+Validation Accuracy: 58.17%
+Validation F1: 0.4850
+Learning Rate: 0.000400
+Epoch Time: 525.1 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 8/50
+Train Loss: 0.6551
+Train Accuracy: 78.62%
+Validation Loss: 1.2173
+Validation Accuracy: 59.81%
+Validation F1: 0.5564
+Learning Rate: 0.000400
+Epoch Time: 560.2 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 9/50
+Train Loss: 0.6438
+Train Accuracy: 80.16%
+Validation Loss: 1.3589
+Validation Accuracy: 62.12%
+Validation F1: 0.6037
+Learning Rate: 0.000400
+Epoch Time: 548.7 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 10/50
+Train Loss: 0.5674
+Train Accuracy: 82.25%
+Validation Loss: 1.3538
+Validation Accuracy: 63.16%
+Validation F1: 0.5297
+Learning Rate: 0.000400
+Epoch Time: 630.7 seconds
+Best Model Saved: Yes
+Early Stopping: No
+--------------------------------
+Epoch 11/50
+Train Loss: 0.5032
+Train Accuracy: 85.13%
+Validation Loss: 1.5541
+Validation Accuracy: 58.24%
+Validation F1: 0.5647
+Learning Rate: 0.000400
+Epoch Time: 871.0 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 12/50
+Train Loss: 0.4263
+Train Accuracy: 87.73%
+Validation Loss: 2.2000
+Validation Accuracy: 56.67%
+Validation F1: 0.5464
+Learning Rate: 0.000400
+Epoch Time: 1025.6 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 13/50
+Train Loss: 0.4296
+Train Accuracy: 88.10%
+Validation Loss: 1.8062
+Validation Accuracy: 59.28%
+Validation F1: 0.5648
+Learning Rate: 0.000400
+Epoch Time: 998.5 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 14/50
+Train Loss: 0.4476
+Train Accuracy: 88.24%
+Validation Loss: 1.6154
+Validation Accuracy: 61.97%
+Validation F1: 0.5940
+Learning Rate: 0.000400
+Epoch Time: 957.7 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 15/50
+Train Loss: 0.3291
+Train Accuracy: 92.05%
+Validation Loss: 1.5473
+Validation Accuracy: 63.09%
+Validation F1: 0.6069
+Learning Rate: 0.000400
+Epoch Time: 898.4 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------
+Epoch 16/50
+Train Loss: 0.2809
+Train Accuracy: 93.12%
+Validation Loss: 1.6141
+Validation Accuracy: 61.89%
+Validation F1: 0.5951
+Learning Rate: 0.000400
+Epoch Time: 903.7 seconds
+Best Model Saved: No
+Early Stopping: No
+--------------------------------

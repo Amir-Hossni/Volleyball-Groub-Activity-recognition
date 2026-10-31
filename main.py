@@ -28,9 +28,8 @@ from utlis.helper_fun import (
 )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Argument parser
-# ─────────────────────────────────────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -95,9 +94,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Dataset / DataLoader factory
-# ─────────────────────────────────────────────────────────────────────────────
 
 def build_loaders(data_cfg: dict, args: argparse.Namespace, mode: str, image_level: bool = False):
     data_root   = Path(data_cfg["DATA_ROOT"])
@@ -703,8 +700,7 @@ def train_baseline7(args, cfg, device, scene_to_idx, player_to_idx):
 
         # Reload best Phase 1 probe checkpoint if available so Phase 2 starts from the best state
         probe_ckpt_path = Path(f"{out_dir}/best_Baseline7.pth")
-        if probe_ckpt_path.exists():
-            load_checkpoint(actual_model, str(probe_ckpt_path), device)
+        load_checkpoint(actual_model, str(probe_ckpt_path), device)
 
         lstm1_params = actual_model.unfreeze_person_lstm()
         print("LSTM1 unfrozen for Phase 2")
@@ -751,9 +747,9 @@ def train_baseline7(args, cfg, device, scene_to_idx, player_to_idx):
             device=device,
             adapter=b7_adapter,
             num_classes=len(scene_to_idx),
-            save_path=f"{out_dir}/best_Baseline7.pth",
+            save_path=f"{out_dir}/best_Baseline_7_stage2.pth",
             class_names=list(scene_to_idx),
-            log_name="Baseline7_finetune",
+            log_name="Baseline_7_stage2",
             epochs=finetune_epochs,
             early_stop_patience=15,
             use_amp=use_amp,

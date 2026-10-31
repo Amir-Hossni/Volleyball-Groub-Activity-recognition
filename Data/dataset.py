@@ -1,8 +1,10 @@
 from pathlib import Path
 
 import torch
+import torch.nn.functional as F
 from PIL import Image
 from torch.utils.data import Dataset
+from torchvision.transforms import functional as TF
 
 from .boxinfo import BoxInfo
 from .volleyball_annot_loader import load_tracking_annot, load_video_annot
@@ -513,22 +515,19 @@ class VolleyballDataset(Dataset):
             }
 
         
-        # B6
+        # B6 / B7
         elif self.mode == "clip_frames_players":
 
             frame_boxes = sample["frame_boxes"]
-
-            # --------------------------------------------------
-            # 1. Get the 9 frames of the clip
-            # --------------------------------------------------
             frame_ids = sorted(frame_boxes.keys())
 
             player_images = []
             player_mask = []
 
-            # --------------------------------------------------
-            # 2. Process every frame
-            # --------------------------------------------------
+            # Mean/std للـ batch normalization (نفس قيم transforms.Normalize)
+            mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+            std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+
             for frame_id in frame_ids:
 
                 image_path = (
@@ -537,86 +536,46 @@ class VolleyballDataset(Dataset):
                     / sample["clip_id"]
                     / f"{frame_id}.jpg"
                 )
-
                 image = self._load_image(image_path)
 
-                # Sort players by player_ID
-                boxes = sorted(
-                    frame_boxes[frame_id],
-                    key=lambda box: box.player_ID
-                )
+                # قاموس للبحث الفوري O(1) بدلاً من التكرار الخطي لكل لاعب
+                box_dict = {box.player_ID: box for box in frame_boxes[frame_id]}
 
-                frame_players = []
-                frame_mask = []
+                valid_crops = []
+                valid_player_ids = []
 
-                # --------------------------------------------------
-                # 3. Always create 12 player slots
-                # --------------------------------------------------
                 for player_id in range(12):
-
-                    player_box = next(
-                        (
-                            box
-                            for box in boxes
-                            if box.player_ID == player_id
-                        ),
-                        None,
-                    )
-
-                    # --------------------------------------------------
-                    # Player exists
-                    # --------------------------------------------------
+                    player_box = box_dict.get(player_id)
                     if player_box is not None:
+                        crop = self._crop_player(image, player_box)
+                        # تحويل PIL -> Tensor [0,1] مرة واحدة لكل كروب
+                        crop_tensor = TF.to_tensor(crop)
+                        valid_crops.append(crop_tensor)
+                        valid_player_ids.append(player_id)
 
-                        crop = self._crop_player(
-                            image,
-                            player_box
-                        )
+                # معالجة دفعة واحدة لكل الكروبات الصالحة في هذا الإطار
+                if valid_crops:
+                    batch = torch.stack(valid_crops)                       # (N,3,H,W)
+                    batch = F.interpolate(
+                        batch, size=(224, 224),
+                        mode="bilinear", align_corners=False
+                    )
+                    batch = (batch - mean) / std                           # batch normalize
+                else:
+                    batch = torch.zeros(0, 3, 224, 224)
 
-                        if self.transform:
-                            crop = self.transform(crop)
-
-                        frame_players.append(crop)
-                        frame_mask.append(True)
-
-                    # --------------------------------------------------
-                    # Player does not exist -> padding
-                    # --------------------------------------------------
-                    else:
-
-                        if frame_players:
-                            padding = torch.zeros_like(
-                                frame_players[0]
-                            )
-                        else:
-                            padding = torch.zeros(
-                                3,
-                                224,
-                                224
-                            )
-
-                        frame_players.append(padding)
-                        frame_mask.append(False)
-
-                # --------------------------------------------------
-                # 4. Stack players of this frame
-                # --------------------------------------------------
-                frame_players = torch.stack(frame_players)
-
-                frame_mask = torch.tensor(
-                    frame_mask,
-                    dtype=torch.bool
-                )
+                # إعادة التوزيع على 12 خانة لاعب
+                frame_players = torch.zeros(12, 3, 224, 224)
+                frame_mask = torch.zeros(12, dtype=torch.bool)
+                for idx, player_id in enumerate(valid_player_ids):
+                    frame_players[player_id] = batch[idx]
+                    frame_mask[player_id] = True
 
                 player_images.append(frame_players)
                 player_mask.append(frame_mask)
 
-            # --------------------------------------------------
-            # 5. Stack the 9 frames
-            # --------------------------------------------------
-            player_images = torch.stack(player_images)
-
-            player_mask = torch.stack(player_mask)
+            player_images = torch.stack(player_images)   # (9, 12, 3, 224, 224)
+            player_mask = torch.stack(player_mask)         # (9, 12)
 
             return {
                 "images": player_images,
