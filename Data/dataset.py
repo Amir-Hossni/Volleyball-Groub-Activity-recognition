@@ -548,18 +548,17 @@ class VolleyballDataset(Dataset):
                     player_box = box_dict.get(player_id)
                     if player_box is not None:
                         crop = self._crop_player(image, player_box)
-                        # تحويل PIL -> Tensor [0,1] مرة واحدة لكل كروب
+                        # تحويل PIL -> Tensor [0,1] وتصغير إلى (224,224) مرة واحدة لكل كروب
                         crop_tensor = TF.to_tensor(crop)
+                        crop_tensor = TF.resize(
+                            crop_tensor, (224, 224), antialias=True
+                        )
                         valid_crops.append(crop_tensor)
                         valid_player_ids.append(player_id)
 
-                # معالجة دفعة واحدة لكل الكروبات الصالحة في هذا الإطار
+                # معالجة دفعة واحدة للتطبيع (batch normalize) على كامل الإطار
                 if valid_crops:
-                    batch = torch.stack(valid_crops)                       # (N,3,H,W)
-                    batch = F.interpolate(
-                        batch, size=(224, 224),
-                        mode="bilinear", align_corners=False
-                    )
+                    batch = torch.stack(valid_crops)                       # (N,3,224,224)
                     batch = (batch - mean) / std                           # batch normalize
                 else:
                     batch = torch.zeros(0, 3, 224, 224)
