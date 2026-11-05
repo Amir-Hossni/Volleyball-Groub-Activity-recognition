@@ -524,7 +524,7 @@ class VolleyballDataset(Dataset):
             player_images = []
             player_mask = []
 
-            # Mean/std للـ batch normalization (نفس قيم transforms.Normalize)
+            # Mean/std for batch normalization
             mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
             std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
@@ -536,9 +536,9 @@ class VolleyballDataset(Dataset):
                     / sample["clip_id"]
                     / f"{frame_id}.jpg"
                 )
-                image = self._load_image(image_path)
+                # Load as tensor once (C, H, W) float32 [0,1]
+                image_tensor = TF.to_tensor(self._load_image(image_path))
 
-                # قاموس للبحث الفوري O(1) بدلاً من التكرار الخطي لكل لاعب
                 box_dict = {box.player_ID: box for box in frame_boxes[frame_id]}
 
                 valid_crops = []
@@ -547,23 +547,25 @@ class VolleyballDataset(Dataset):
                 for player_id in range(12):
                     player_box = box_dict.get(player_id)
                     if player_box is not None:
-                        crop = self._crop_player(image, player_box)
-                        # تحويل PIL -> Tensor [0,1] وتصغير إلى (224,224) مرة واحدة لكل كروب
-                        crop_tensor = TF.to_tensor(crop)
-                        crop_tensor = TF.resize(
-                            crop_tensor, (224, 224), antialias=True
-                        )
+                        x1, y1, x2, y2 = player_box.box
+                        crop_tensor = image_tensor[:, y1:y2, x1:x2]
                         valid_crops.append(crop_tensor)
                         valid_player_ids.append(player_id)
 
-                # معالجة دفعة واحدة للتطبيع (batch normalize) على كامل الإطار
                 if valid_crops:
-                    batch = torch.stack(valid_crops)                       # (N,3,224,224)
-                    batch = (batch - mean) / std                           # batch normalize
+                    # Resize each crop individually then stack & normalize
+                    resized = [
+                        F.interpolate(
+                            c.unsqueeze(0), size=(224, 224),
+                            mode="bilinear", align_corners=False
+                        ).squeeze(0)
+                        for c in valid_crops
+                    ]
+                    batch = torch.stack(resized)   # (N, 3, 224, 224)
+                    batch = (batch - mean) / std
                 else:
                     batch = torch.zeros(0, 3, 224, 224)
 
-                # إعادة التوزيع على 12 خانة لاعب
                 frame_players = torch.zeros(12, 3, 224, 224)
                 frame_mask = torch.zeros(12, dtype=torch.bool)
                 for idx, player_id in enumerate(valid_player_ids):
@@ -641,6 +643,10 @@ class VolleyballDataset(Dataset):
             # --------------------------------------------------
             reference_tensor = None
 
+            # Mean/std for normalization
+            _mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+            _std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+
             for time_idx, frame_id in enumerate(frame_ids):
 
                 image_path = (
@@ -648,7 +654,8 @@ class VolleyballDataset(Dataset):
                     / f"{frame_id}.jpg"
                 )
 
-                image = self._load_image(image_path)
+                # Load as tensor once (C, H, W) float32 [0,1]
+                image_tensor = TF.to_tensor(self._load_image(image_path))
 
                 # --------------------------------------------------
                 # Crop players existing in this frame
@@ -661,19 +668,21 @@ class VolleyballDataset(Dataset):
 
                     if item is not None:
 
-                        crop = self._crop_player(
-                            image,
-                            item["box"]
-                        )
+                        x1, y1, x2, y2 = item["box"].box
+                        crop_tensor = image_tensor[:, y1:y2, x1:x2]
 
-                        if self.transform:
-                            crop = self.transform(crop)
+                        # Resize + normalize (replaces self.transform pipeline)
+                        crop_tensor = F.interpolate(
+                            crop_tensor.unsqueeze(0), size=(224, 224),
+                            mode="bilinear", align_corners=False
+                        ).squeeze(0)
+                        crop_tensor = (crop_tensor - _mean) / _std
 
-                        all_players[player_id][time_idx] = crop
+                        all_players[player_id][time_idx] = crop_tensor
 
                         # First real crop becomes padding reference
                         if reference_tensor is None:
-                            reference_tensor = crop
+                            reference_tensor = crop_tensor
 
             # --------------------------------------------------
             # Padding

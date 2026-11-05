@@ -18,6 +18,7 @@ from Models.Baseline4.model_B4 import TemporalImageClassifierB4
 from Models.Baseline5.model_B5 import GroupTemporalClassifierB5, PersonTemporalB5
 from Models.Baseline6.model_B6 import B6GroupActivityClassifier
 from Models.Baseline7.model_B7 import B7HierarchicalClassifier
+from Models.Baseline8.model_B8 import B8TeamHierarchicalClassifier
 from utlis.helper_fun import (
     load_checkpoint,
     load_config,
@@ -40,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--baseline", "-b",
         type=int,
-        choices=[1, 2, 3, 4, 5, 6, 7],
+        choices=[1, 2, 3, 4, 5, 6, 7, 8],
         required=True,
         help="Which baseline to train (1–8).",
     )
@@ -764,6 +765,212 @@ def train_baseline7(args, cfg, device, scene_to_idx, player_to_idx):
         trainer_finetune.fit(train_loader, val_loader)
 
 
+def train_baseline8(
+    args: argparse.Namespace,
+    cfg: dict,
+    device: torch.device,
+    scene_to_idx: dict,
+    player_to_idx: dict,
+):
+    """
+    Baseline 8: Two-stage hierarchical model with team pooling (two groups)
+    (Ibrahim et al., CVPR 2016 / arXiv:1607.02643)
+
+    Architecture:
+      Crops (B, 9, 12, 3, 224, 224)
+        ↓
+      Frozen B3 ResNet50 (2048) + Person LSTM1 (512) -> P_t^k (2560)
+        ↓
+      Team-separated pooling:
+        Left team (team_mask == 0) pooled -> 2560
+        Right team (team_mask == 1) pooled -> 2560
+        Concatenated -> 5120
+        ↓
+      LayerNorm
+        ↓
+      FC 3000 projection
+        ↓
+      Group LSTM2 (500)
+        ↓
+      Scene head (conv) -> 8 classes
+
+    Phase 1: Linear Probe (Person LSTM frozen, group head trained)
+    Phase 2: Joint Fine-tune (Person LSTM unfrozen with low LR, end-to-end)
+    """
+    train_cfg   = cfg["Training"]
+    b8p_cfg     = train_cfg.get("B8_PROBE", train_cfg["B7_PROBE"])["OPTIMIZER"]
+    b8f_cfg     = train_cfg.get("B8_FINETUNE", train_cfg["B7_FINETUNE"])
+    b8f_sch_cfg = b8f_cfg["SCHEDULER"]
+    out_dir     = args.output_dir
+    use_amp     = not args.no_amp
+
+    run_probe    = args.stage in ("1", "A", "both")
+    run_finetune = args.stage in ("2", "B", "both")
+
+    train_loader, val_loader = build_loaders(
+        cfg["Data"], args, mode="clip_frames_players", image_level=False
+    )
+
+    # ── Build person model (PersonTemporalB5) ────────────────────────────────
+    bare_b3 = PersonClassifierB3(
+        num_classes=len(player_to_idx),
+        pretrained=False,
+    )
+    load_checkpoint(bare_b3, f"{out_dir}/best_B3_person_stage1.pth", device)
+    backbone_b8 = bare_b3.model
+    backbone_b8.fc = nn.Identity()
+
+    person_model = PersonTemporalB5(
+        backbone=backbone_b8,
+        num_classes=len(player_to_idx),
+        lstm_hidden=512,
+        lstm_layers=1,
+        dropout=0.2,
+    )
+    load_checkpoint(person_model, f"{out_dir}/best_Baseline5_stage1.pth", device)
+
+    # ── Build B8 (unwrapped) ─────────────────────────────────────────────────
+    model_B8 = B8TeamHierarchicalClassifier(
+        person_model=person_model,
+        num_classes=len(scene_to_idx),
+        group_feature_dim=3000,
+        hidden_dim=500,
+        feature_dropout=0.0,
+        use_player_proj=False,
+        pool="max",
+        scene_head="conv",
+    )
+
+    # ── DataParallel wrapper (trainers always receive this) ───────────────────
+    wrapped_model_B8 = wrap_dp(model_B8, device)
+
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.01)
+
+    def b8_adapter(batch):
+        return identity_adapter(
+            batch, input_key="images", target_key="scene_label", mask="team"
+        )
+
+    probe_best_acc = 0.0
+
+    # ── Phase 1: Linear Probe ────────────────────────────────────────────────
+    if run_probe:
+        probe_params = [
+            {"params": model_B8.group_norm.parameters()},
+            {"params": model_B8.group_projection.parameters()},
+            {"params": model_B8.lstm.parameters()},
+            {"params": model_B8.classifier.parameters()},
+        ]
+        if model_B8.scene_skip_proj is not None:
+            probe_params.extend([
+                {"params": model_B8.scene_skip_proj.parameters()},
+                {"params": model_B8.scene_conv1.parameters()},
+                {"params": model_B8.scene_conv2.parameters()},
+            ])
+
+        optimizer_probe = torch.optim.AdamW(
+            probe_params,
+            lr=b8p_cfg["lr"],
+            weight_decay=b8p_cfg["weight_decay"],
+        )
+
+        probe_epochs = 10 if args.epochs is None else args.epochs
+
+        trainer_probe = Trainer(
+            model=wrapped_model_B8,
+            optimizer=optimizer_probe,
+            criterion=criterion,
+            device=device,
+            adapter=b8_adapter,
+            num_classes=len(scene_to_idx),
+            save_path=f"{out_dir}/best_Baseline8.pth",
+            class_names=list(scene_to_idx),
+            log_name="Baseline8_probe",
+            epochs=probe_epochs,
+            early_stop_patience=10,
+            use_amp=use_amp,
+            grad_clip=1.0,
+            scheduler=None,
+        )
+
+        print("=== Baseline 8 – Phase 1: Linear Probe ===")
+        trainer_probe.fit(train_loader, val_loader)
+        probe_best_acc = trainer_probe.best_acc
+
+    # ── Phase 2: Joint Fine-tune ─────────────────────────────────────────────
+    if run_finetune:
+        actual_model = (
+            wrapped_model_B8.module
+            if hasattr(wrapped_model_B8, "module")
+            else wrapped_model_B8
+        )
+
+        # Reload best Phase 1 probe checkpoint if available so Phase 2 starts from the best state
+        probe_ckpt_path = Path(f"{out_dir}/best_Baseline8.pth")
+        load_checkpoint(actual_model, str(probe_ckpt_path), device)
+
+        lstm1_params = actual_model.unfreeze_person_lstm()
+        print("LSTM1 unfrozen for Phase 2")
+
+        lr_person = b8f_cfg["LR_PERSON"]
+        wd_person = b8f_cfg["WEIGHT_DECAY_PERSON"]
+        lr_group  = b8f_cfg["LR_GROUP"]
+        wd_group  = b8f_cfg["WEIGHT_DECAY_GROUP"]
+
+        finetune_params = [
+            # LSTM1: low lr to preserve Stage-A person representations
+            {"params": lstm1_params, "lr": lr_person, "weight_decay": wd_person},
+            # group-level components: higher lr
+            {"params": actual_model.group_norm.parameters(), "lr": lr_group, "weight_decay": wd_group},
+            {"params": actual_model.group_projection.parameters(), "lr": lr_group, "weight_decay": wd_group},
+            {"params": actual_model.lstm.parameters(), "lr": lr_group, "weight_decay": wd_group},
+            {"params": actual_model.classifier.parameters(), "lr": lr_group, "weight_decay": wd_group},
+        ]
+        if actual_model.player_proj is not None:
+            finetune_params.append(
+                {"params": actual_model.player_proj.parameters(), "lr": lr_person, "weight_decay": wd_person}
+            )
+        if actual_model.scene_skip_proj is not None:
+            finetune_params.extend([
+                {"params": actual_model.scene_skip_proj.parameters(), "lr": lr_group, "weight_decay": wd_group},
+                {"params": actual_model.scene_conv1.parameters(), "lr": lr_group, "weight_decay": wd_group},
+                {"params": actual_model.scene_conv2.parameters(), "lr": lr_group, "weight_decay": wd_group},
+            ])
+
+        optimizer_finetune = torch.optim.AdamW(finetune_params)
+
+        finetune_epochs = args.epochs or 50
+
+        scheduler_finetune = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer_finetune,
+            T_max=finetune_epochs,
+            eta_min=b8f_sch_cfg["eta_min"],
+        )
+
+        trainer_finetune = Trainer(
+            model=wrapped_model_B8,
+            optimizer=optimizer_finetune,
+            criterion=criterion,
+            device=device,
+            adapter=b8_adapter,
+            num_classes=len(scene_to_idx),
+            save_path=f"{out_dir}/best_Baseline_8_stage2.pth",
+            class_names=list(scene_to_idx),
+            log_name="Baseline_8_stage2",
+            epochs=finetune_epochs,
+            early_stop_patience=15,
+            use_amp=use_amp,
+            grad_clip=1.0,
+            scheduler=scheduler_finetune,
+        )
+        # Retain probe's best accuracy threshold so Phase 2 only saves when it outperforms Phase 1
+        if probe_best_acc > 0:
+            trainer_finetune.best_acc = probe_best_acc
+
+        print("=== Baseline 8 – Phase 2: Joint Fine-tune ===")
+        trainer_finetune.fit(train_loader, val_loader)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Dispatch table
 # ─────────────────────────────────────────────────────────────────────────────
@@ -776,6 +983,7 @@ BASELINE_FNS = {
     5: train_baseline5,
     6: train_baseline6,
     7: train_baseline7,
+    8: train_baseline8,
 }
 
 

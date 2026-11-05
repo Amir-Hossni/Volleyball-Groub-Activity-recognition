@@ -429,6 +429,15 @@ python main.py --baseline 7 --stage 1
 # Train Baseline 7 – Phase 2 only (requires Phase-1 or Stage-1 checkpoint):
 python main.py --baseline 7 --stage 2
 
+# Train Baseline 8 – Two-subgroup team pooling (Phase 1 + Phase 2):
+python main.py --baseline 8
+
+# Train Baseline 8 – Phase 1 only (Linear Probe):
+python main.py --baseline 8 --stage 1 --epochs 15 --batch-size 8
+
+# Train Baseline 8 – Phase 2 only (Joint Fine-tune):
+python main.py --baseline 8 --stage 2 --epochs 50 --batch-size 8
+
 # Train Baseline 1 (single-frame scene classifier):
 python main.py --baseline 1
 
