@@ -453,6 +453,12 @@ python main.py --baseline 5
 # Override epochs and batch size at the CLI:
 python main.py --baseline 7 --epochs 30 --batch-size 8
 
+# Resume interrupted training from last_checkpoint.pth automatically:
+python main.py --baseline 8 --stage 2 --epochs 35 --resume
+
+# Resume training from an explicit checkpoint file:
+python main.py --baseline 8 --stage 2 --epochs 50 --resume /kaggle/working/last_checkpoint.pth
+
 # Use a custom config file:
 python main.py --baseline 7 --config config.yaml
 ```

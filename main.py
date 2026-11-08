@@ -91,6 +91,18 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Disable Automatic Mixed Precision (AMP).",
     )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        nargs="?",
+        const="auto",
+        help=(
+            "Resume training from a checkpoint (.pth). "
+            "Pass an explicit file path ('--resume /path/to/last_checkpoint.pth') "
+            "or bare '--resume' to auto-locate last_checkpoint.pth in --output-dir."
+        ),
+    )
 
     return parser.parse_args()
 
@@ -132,7 +144,7 @@ def build_loaders(data_cfg: dict, args: argparse.Namespace, mode: str, image_lev
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         pin_memory=torch.cuda.is_available(),
-        persistent_workers=(args.num_workers > 0),
+        persistent_workers=False,
         prefetch_factor=2 if args.num_workers > 0 else None,
     )
 
@@ -199,6 +211,10 @@ def train_baseline1(args, cfg, device, scene_to_idx, player_to_idx):
         grad_clip=None,
     )
 
+    if args.resume:
+        resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+        trainer.resume(resume_target)
+
     print("=== Baseline 1: Training ===")
     trainer.fit(train_loader, val_loader)
 
@@ -246,6 +262,10 @@ def train_baseline2(args, cfg, device, scene_to_idx, player_to_idx):
         use_amp=use_amp,
         grad_clip=None,
     )
+
+    if args.resume:
+        resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+        trainer.resume(resume_target)
 
     print("=== Baseline 2: Training ===")
     trainer.fit(train_loader, val_loader)
@@ -299,6 +319,10 @@ def train_baseline3(args, cfg, device, scene_to_idx, player_to_idx):
             use_amp=use_amp,
             grad_clip=None,
         )
+        if args.resume and not run_stage_b:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_a.resume(resume_target)
+
         print("=== Baseline 3 – Stage A: Person Classifier ===")
         trainer_a.fit(train_loader_a, val_loader_a)
 
@@ -308,15 +332,23 @@ def train_baseline3(args, cfg, device, scene_to_idx, player_to_idx):
             cfg["Data"], args, mode="person_grouped", image_level=False
         )
 
-        ckpt_path = f"{out_dir}/best_B3_person_stage1.pth"
-        bare_person = PersonClassifierB3(
-            num_classes=len(player_to_idx),
-            pretrained=False,
-        )
-        load_checkpoint(bare_person, ckpt_path, device)
+        if not (args.resume and run_stage_b):
+            ckpt_path = f"{out_dir}/best_B3_person_stage1.pth"
+            bare_person = PersonClassifierB3(
+                num_classes=len(player_to_idx),
+                pretrained=False,
+            )
+            load_checkpoint(bare_person, ckpt_path, device)
 
-        backbone = bare_person.model
-        backbone.fc = nn.Identity()
+            backbone = bare_person.model
+            backbone.fc = nn.Identity()
+        else:
+            bare_person = PersonClassifierB3(
+                num_classes=len(player_to_idx),
+                pretrained=False,
+            )
+            backbone = bare_person.model
+            backbone.fc = nn.Identity()
 
         group_model = GroupClassifierB3(
             backbone=backbone,
@@ -349,6 +381,10 @@ def train_baseline3(args, cfg, device, scene_to_idx, player_to_idx):
             grad_clip=None,
             scheduler=scheduler_b,
         )
+        if args.resume and run_stage_b:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_b.resume(resume_target)
+
         print("=== Baseline 3 – Stage B: Group Classifier ===")
         trainer_b.fit(train_loader_b, val_loader_b)
 
@@ -403,6 +439,10 @@ def train_baseline4(args, cfg, device, scene_to_idx, player_to_idx):
         use_amp=use_amp,
         grad_clip=None,
     )
+
+    if args.resume:
+        resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+        trainer.resume(resume_target)
 
     print("=== Baseline 4: Temporal Image Classifier ===")
     trainer.fit(train_loader, val_loader)
@@ -472,6 +512,10 @@ def train_baseline5(args, cfg, device, scene_to_idx, player_to_idx):
             grad_clip=1.0,
             scheduler=scheduler_s1,
         )
+        if args.resume and not run_s2:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_s1.resume(resume_target)
+
         print("=== Baseline 5 – Stage 1: Person Temporal ===")
         trainer_s1.fit(train_loader, val_loader)
 
@@ -522,6 +566,10 @@ def train_baseline5(args, cfg, device, scene_to_idx, player_to_idx):
             grad_clip=1.0,
             scheduler=scheduler_s2,
         )
+        if args.resume and run_s2:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_s2.resume(resume_target)
+
         print("=== Baseline 5 – Stage 2: Group Temporal ===")
         trainer_s2.fit(train_loader, val_loader)
 
@@ -577,6 +625,10 @@ def train_baseline6(args, cfg, device, scene_to_idx, player_to_idx):
         grad_clip=None,
         scheduler=scheduler,
     )
+
+    if args.resume:
+        resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+        trainer.resume(resume_target)
 
     print("=== Baseline 6: Group Activity Classifier ===")
     trainer.fit(train_loader, val_loader)
@@ -687,6 +739,10 @@ def train_baseline7(args, cfg, device, scene_to_idx, player_to_idx):
             scheduler=None,
         )
 
+        if args.resume and run_probe and not run_finetune:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_probe.resume(resume_target)
+
         print("=== Baseline 7 – Phase 1: Linear Probe ===")
         trainer_probe.fit(train_loader, val_loader)
         probe_best_acc = trainer_probe.best_acc
@@ -700,8 +756,9 @@ def train_baseline7(args, cfg, device, scene_to_idx, player_to_idx):
         )
 
         # Reload best Phase 1 probe checkpoint if available so Phase 2 starts from the best state
-        probe_ckpt_path = Path(f"{out_dir}/best_Baseline7.pth")
-        load_checkpoint(actual_model, str(probe_ckpt_path), device)
+        if not (args.resume and run_finetune):
+            probe_ckpt_path = Path(f"{out_dir}/best_Baseline7.pth")
+            load_checkpoint(actual_model, str(probe_ckpt_path), device)
 
         lstm1_params = actual_model.unfreeze_person_lstm()
         print("LSTM1 unfrozen for Phase 2")
@@ -760,6 +817,10 @@ def train_baseline7(args, cfg, device, scene_to_idx, player_to_idx):
         # Retain probe's best accuracy threshold so Phase 2 only saves when it outperforms Phase 1
         if probe_best_acc > 0:
             trainer_finetune.best_acc = probe_best_acc
+
+        if args.resume and run_finetune:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_finetune.resume(resume_target)
 
         print("=== Baseline 7 – Phase 2: Joint Fine-tune ===")
         trainer_finetune.fit(train_loader, val_loader)
@@ -893,6 +954,10 @@ def train_baseline8(
             scheduler=None,
         )
 
+        if args.resume and run_probe and not run_finetune:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_probe.resume(resume_target)
+
         print("=== Baseline 8 – Phase 1: Linear Probe ===")
         trainer_probe.fit(train_loader, val_loader)
         probe_best_acc = trainer_probe.best_acc
@@ -906,8 +971,9 @@ def train_baseline8(
         )
 
         # Reload best Phase 1 probe checkpoint if available so Phase 2 starts from the best state
-        probe_ckpt_path = Path(f"{out_dir}/best_Baseline8.pth")
-        load_checkpoint(actual_model, str(probe_ckpt_path), device)
+        if not (args.resume and run_finetune):
+            probe_ckpt_path = Path(f"{out_dir}/best_Baseline8.pth")
+            load_checkpoint(actual_model, str(probe_ckpt_path), device)
 
         lstm1_params = actual_model.unfreeze_person_lstm()
         print("LSTM1 unfrozen for Phase 2")
@@ -966,6 +1032,10 @@ def train_baseline8(
         # Retain probe's best accuracy threshold so Phase 2 only saves when it outperforms Phase 1
         if probe_best_acc > 0:
             trainer_finetune.best_acc = probe_best_acc
+
+        if args.resume and run_finetune:
+            resume_target = f"{out_dir}/last_checkpoint.pth" if args.resume == "auto" else args.resume
+            trainer_finetune.resume(resume_target)
 
         print("=== Baseline 8 – Phase 2: Joint Fine-tune ===")
         trainer_finetune.fit(train_loader, val_loader)

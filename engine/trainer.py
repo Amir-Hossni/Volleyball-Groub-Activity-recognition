@@ -1,3 +1,4 @@
+import gc
 import time
 from pathlib import Path
 from tqdm.auto import tqdm
@@ -71,10 +72,85 @@ class Trainer:
 
         self.best_acc = 0.0
         self.last_ckpt_path = Path(save_path).parent / "last_checkpoint.pth"
+        self.start_epoch = 0
 
         self.scaler = torch.amp.GradScaler(
             self.device.type,
             enabled=self.use_amp,
+        )
+
+    def resume(self, checkpoint_path):
+        """
+        Resume training state from a saved checkpoint:
+        restores model weights, optimizer state, AMP scaler, best_acc,
+        and sets self.start_epoch.
+        """
+        ckpt_path = Path(checkpoint_path)
+        if not ckpt_path.exists():
+            if Path(ckpt_path.name).exists():
+                ckpt_path = Path(ckpt_path.name)
+            else:
+                kaggle_input = Path("/kaggle/input")
+                matches = list(kaggle_input.glob(f"**/{ckpt_path.name}")) if kaggle_input.exists() else []
+                if matches:
+                    ckpt_path = matches[0]
+                    print(f"[resume] Auto-located checkpoint in /kaggle/input: {ckpt_path}")
+                else:
+                    raise FileNotFoundError(f"[resume] Checkpoint file not found: '{checkpoint_path}'")
+
+        try:
+            ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+        except TypeError:
+            ckpt = torch.load(ckpt_path, map_location=self.device)
+
+        # 1. Model weights
+        state_dict = ckpt["model_state_dict"] if isinstance(ckpt, dict) and "model_state_dict" in ckpt else ckpt
+        actual_model = self._get_model_for_save()
+        target_keys = list(actual_model.state_dict().keys())
+        target_has_prefix = any(k.startswith("module.") for k in target_keys)
+        src_has_prefix = any(k.startswith("module.") for k in state_dict.keys())
+        if target_has_prefix and not src_has_prefix:
+            state_dict = {f"module.{k}": v for k, v in state_dict.items()}
+        elif not target_has_prefix and src_has_prefix:
+            state_dict = {k.replace("module.", "", 1): v for k, v in state_dict.items()}
+        actual_model.load_state_dict(state_dict)
+
+        # 2. Optimizer state
+        if isinstance(ckpt, dict) and "optimizer_state_dict" in ckpt and self.optimizer is not None:
+            try:
+                self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            except Exception as e:
+                print(f"[resume] Note: Optimizer state not fully restored ({e}). Using fresh optimizer.")
+
+        # 3. Scaler state
+        if isinstance(ckpt, dict) and "scaler_state_dict" in ckpt and self.scaler is not None:
+            try:
+                self.scaler.load_state_dict(ckpt["scaler_state_dict"])
+            except Exception:
+                pass
+
+        # 4. Starting epoch & best_acc
+        if isinstance(ckpt, dict) and "epoch" in ckpt:
+            self.start_epoch = ckpt["epoch"] + 1
+
+        if isinstance(ckpt, dict):
+            saved_acc = ckpt.get("val_acc", ckpt.get("accuracy", 0.0))
+            if saved_acc > self.best_acc:
+                self.best_acc = float(saved_acc)
+                self.early_stopping.best_score = self.best_acc
+
+        # 5. Fast-forward scheduler if needed
+        if self.scheduler is not None and self.start_epoch > 0:
+            if not isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                for _ in range(self.start_epoch):
+                    try:
+                        self.scheduler.step()
+                    except Exception:
+                        break
+
+        print(
+            f"[resume] Successfully resumed from '{ckpt_path}' at epoch "
+            f"{self.start_epoch + 1}/{self.epochs} (best_acc: {self.best_acc:.2f}%)"
         )
 
     def _autocast(self):
@@ -198,9 +274,16 @@ class Trainer:
     def fit(self, train_loader, val_loader):
         from engine.evaluator import evaluate
 
-        epoch = 0
+        if self.start_epoch >= self.epochs:
+            tqdm.write(
+                f"[resume] Requested epochs ({self.epochs}) <= starting epoch ({self.start_epoch}). "
+                "Training already complete. Exiting."
+            )
+            return
+
+        epoch = self.start_epoch
         try:
-            for epoch in range(self.epochs):
+            for epoch in range(self.start_epoch, self.epochs):
 
                 train_loss, train_metrics = self.train_one_epoch(train_loader, epoch)
 
@@ -332,6 +415,11 @@ class Trainer:
                     else:
                         # e.g. CosineAnnealingLR steps once per epoch
                         self.scheduler.step()
+
+                # Clean Host RAM and GPU VRAM cache to prevent fragmentation leak across epochs
+                gc.collect()
+                if self.is_cuda:
+                    torch.cuda.empty_cache()
                 
                 if early_stopped:
                     break
